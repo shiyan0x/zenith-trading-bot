@@ -1,0 +1,18 @@
+# Honest AI Trading Bot
+# Real prices, fake money, never lies.
+# Following the Fabrichhhhhh Guide.
+
+# --- Core dependencies ---
+websockets>=13.0
+aiohttp>=3.9
+pandas>=2.2
+numpy>=1.26
+
+# --- Dashboard ---
+flask>=3.0
+flask-socketio>=5.3
+gevent>=24.2
+gevent-websocket>=0.10
+
+# --- Utilities ---
+python-dateutil>=2.9

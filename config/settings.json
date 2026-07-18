@@ -1,0 +1,77 @@
+{
+    "paper_trading": {
+        "starting_balance": 10000,
+        "currency": "USDT",
+        "description": "Fake money. This is a simulation, not real trading."
+    },
+    "symbols": ["BTCUSDT", "ETHUSDT"],
+    "timeframe": "1m",
+    "exchange": {
+        "name": "binance",
+        "ws_url": "wss://stream.binance.com:9443/ws",
+        "rest_url": "https://api.binance.com",
+        "klines_endpoint": "/api/v3/klines",
+        "ticker_endpoint": "/api/v3/ticker/price",
+        "note": "Public endpoints, no API key needed. Verified July 2026."
+    },
+    "fees": {
+        "spot_maker": 0.001,
+        "spot_taker": 0.001,
+        "futures_maker": 0.0002,
+        "futures_taker": 0.0005,
+        "mode": "spot",
+        "source": "https://www.binance.com/en/fee/trading",
+        "note": "VIP 0 base rates. Verified July 2026."
+    },
+    "slippage": {
+        "base_bps": 5,
+        "volatility_multiplier": 2.0,
+        "max_bps": 30,
+        "note": "5 basis points base for BTC/ETH majors, scaled up in volatile conditions."
+    },
+    "funding": {
+        "enabled": false,
+        "interval_hours": 8,
+        "note": "Only applies to futures. Disabled since we trade spot by default."
+    },
+    "kelly": {
+        "fraction": 0.5,
+        "lookback_trades": 20,
+        "min_trades_required": 10,
+        "note": "Half-Kelly (0.5 * f*). Recalculates every 20 trades."
+    },
+    "risk": {
+        "max_drawdown_pct": 15,
+        "max_risk_per_trade_pct": 2,
+        "circuit_breaker_cooldown_minutes": 60,
+        "note": "If equity drops 15% from peak, stop all trading. Never risk more than 2% per trade."
+    },
+    "strategies": {
+        "sma_crossover": {
+            "enabled": true,
+            "short_period": 10,
+            "long_period": 30
+        },
+        "rsi_mean_revert": {
+            "enabled": true,
+            "period": 14,
+            "oversold": 30,
+            "overbought": 70
+        },
+        "breakout": {
+            "enabled": true,
+            "period": 20
+        }
+    },
+    "backtest": {
+        "history_days": 90,
+        "train_ratio": 0.7,
+        "min_sharpe": 0.5,
+        "min_trades": 20,
+        "note": "Walk-forward: train on 70%, test on 30%. Reject strategies with Sharpe < 0.5 or too few trades."
+    },
+    "dashboard": {
+        "host": "127.0.0.1",
+        "port": 5000
+    }
+}

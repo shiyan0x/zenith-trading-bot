@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenith Trading Bot — Live Dashboard</title>
+    <meta name="description" content="AI-powered paper trading dashboard — real prices, fake money, honest results.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════
+           DESIGN SYSTEM — Warm Dark Theme
+           ═══════════════════════════════════════════════════ */
+        :root {
+            /* Backgrounds */
+            --bg-body: #0f0f13;
+            --bg-sidebar: #16151d;
+            --bg-main: #1a1924;
+            --bg-card: rgba(30, 28, 42, 0.7);
+            --bg-card-solid: #1e1c2a;
+            --bg-card-hover: rgba(40, 37, 58, 0.8);
+            --bg-input: rgba(255, 255, 255, 0.04);
+
+            /* Borders */
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+
+            /* Text */
+            --text-primary: #eeedf5;
+            --text-secondary: #9d99b3;
+            --text-muted: #5e5a73;
+
+            /* Warm Accent Gradient */
+            --accent-start: #ff6b35;
+            --accent-mid: #e84545;
+            --accent-end: #d42a6e;
+            --accent-gradient: linear-gradient(135deg, #ff6b35, #e84545, #d42a6e);
+            --accent-gradient-soft: linear-gradient(135deg, rgba(255,107,53,0.15), rgba(232,69,69,0.15), rgba(212,42,110,0.15));
+
+            /* Semantic Colors */
+            --green: #22c55e;
+            --green-soft: rgba(34, 197, 94, 0.12);
+            --green-glow: rgba(34, 197, 94, 0.3);
+            --red: #ef4444;
+            --red-soft: rgba(239, 68, 68, 0.12);
+            --red-glow: rgba(239, 68, 68, 0.3);
+            --amber: #f59e0b;
+            --amber-soft: rgba(245, 158, 11, 0.12);
+            --blue: #3b82f6;
+            --purple: #a855f7;
+
+            /* Sizing */
+            --sidebar-width: 260px;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+
+            /* Transitions */
+            --transition-fast: 0.15s ease;
+            --transition-med: 0.25s ease;
+            --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ─── Reset ─── */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+        /* ═══════════════════════════════════════════════════
+           SIDEBAR
+           ═══════════════════════════════════════════════════ */
+        .sidebar {
+            width: var(--sidebar-width);
+            min-height: 100vh;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 200;
+            transition: transform var(--transition-slow);
+        }
+
+        /* ─── Profile Block ─── */
+        .profile-block {
+            padding: 1.5rem 1.25rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .profile-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .profile-info h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .profile-version {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .profile-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .profile-status.live {
+            background: var(--green-soft);
+            color: var(--green);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .profile-status.stopped {
+            background: var(--red-soft);
+            color: var(--red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .profile-status .pulse-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* ─── Nav ─── */
+        .nav {
+            flex: 1;
+            padding: 0.75rem 0;
+            overflow-y: auto;
+        }
+
+        /* ─── Timeframe Selector ─── */
+        .tf-selector {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tf-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .tf-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .tf-pill {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all var(--transition-med);
+            user-select: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tf-pill:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
+
+        .tf-pill.active {
+            background: var(--accent-gradient);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 2px 10px rgba(232, 69, 69, 0.25);
+        }
+
+        .tf-toast {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--bg-card-solid);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-md);
+            padding: 0.7rem 1.2rem;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 500;
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        .tf-toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .tf-toast .toast-icon {
+            margin-right: 6px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1.25rem;
+            margin: 2px 0.6rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-med);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            position: relative;
+            user-select: none;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--accent-gradient);
+            color: #fff;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(232, 69, 69, 0.25);
+        }
+
+        .nav-item .nav-icon {
+            font-size: 1.1rem;
+            width: 22px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .nav-item .nav-badge {
+            margin-left: auto;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+
+        .nav-item.active .nav-badge {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ─── Sidebar Footer ─── */
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .sidebar-footer p {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        /* ─── Mobile Hamburger ─── */
+        .mobile-topbar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border);
+            z-index: 300;
+            align-items: center;
+            padding: 0 1rem;
+            gap: 1rem;
+        }
+
+        .hamburger {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            padding: 6px;
+        }
+
+        .hamburger span {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 1px;
+            transition: all var(--transition-fast);
+        }
+
+        .mobile-topbar .mobile-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 150;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           MAIN CONTENT AREA
+           ═══════════════════════════════════════════════════ */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* ─── View Sections ─── */
+        .view-section {
+            display: none;
+            animation: viewFadeIn 0.35s ease;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes viewFadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── Section Header ─── */
+        .section-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 0.3rem;
+        }
+
+        .section-header .section-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* ─── Alert Banner ─── */
+        .alert-banner {
+            background: var(--accent-gradient-soft);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: var(--radius-md);
+            padding: 0.9rem 1.2rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            display: none;
+        }
+
+        .alert-banner.visible { display: block; }
+
+        .alert-banner strong { color: #ff9f67; }
+
+        /* ─── Stat Cards Grid ─── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.2rem 1.3rem;
+            backdrop-filter: blur(12px);
+            transition: all var(--transition-med);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity var(--transition-med);
+        }
+
+        .stat-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card:hover::before { opacity: 1; }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            line-height: 1.15;
+        }
+
+        .stat-sub {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 0.35rem;
+            font-weight: 500;
+        }
+
+        /* ─── Glass Cards ─── */
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            margin-bottom: 1.5rem;
+            transition: border-color var(--transition-med);
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .card-title .icon { font-size: 1.15rem; }
+
+        .card-columns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* ─── Chart ─── */
+        .chart-container {
+            width: 100%;
+            height: 280px;
+            position: relative;
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ─── Tables ─── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 0.65rem 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table td {
+            padding: 0.65rem 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            transition: background var(--transition-fast);
+        }
+
+        .data-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .data-table .mono {
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 0.78rem;
+        }
+
+        /* ─── Risk Meter ─── */
+        .risk-meter {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-input);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.6rem;
+        }
+
+        .risk-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s ease, background 0.6s ease;
+        }
+
+        /* ─── Episode Bars ─── */
+        .episode-bars {
+            display: flex;
+            gap: 0.6rem;
+            align-items: flex-end;
+            height: 120px;
+            padding: 0.5rem 0;
+        }
+
+        .episode-bar {
+            flex: 1;
+            max-width: 60px;
+            border-radius: 6px 6px 2px 2px;
+            position: relative;
+            cursor: pointer;
+            transition: all var(--transition-med);
+            min-height: 20px;
+        }
+
+        .episode-bar:hover {
+            filter: brightness(1.2);
+            transform: scaleY(1.05);
+            transform-origin: bottom;
+        }
+
+        .episode-bar.goal { background: var(--green); box-shadow: 0 4px 12px var(--green-glow); }
+        .episode-bar.blowup { background: var(--red); box-shadow: 0 4px 12px var(--red-glow); }
+        .episode-bar.running { background: var(--amber); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+        .episode-bar.neutral { background: var(--text-muted); }
+
+        .episode-number {
+            text-align: center;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* ─── Finished Runs List ─── */
+        .run-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .run-item:last-child { border-bottom: none; }
+
+        .run-number {
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            min-width: 32px;
+        }
+
+        .run-status {
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+
+        .run-status.goal { background: var(--green-soft); color: var(--green); }
+        .run-status.blowup { background: var(--red-soft); color: var(--red); }
+        .run-status.running { background: var(--amber-soft); color: var(--amber); }
+
+        .run-expand {
+            margin-left: auto;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 1rem;
+            transition: transform var(--transition-fast);
+        }
+
+        .run-expand:hover { transform: scale(1.2); }
+
+        /* ─── Lesson Cards ─── */
+        .lesson-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.1rem 1.2rem;
+            margin-bottom: 0.75rem;
+            transition: all var(--transition-med);
+        }
+
+        .lesson-card:hover {
+            border-color: var(--border-hover);
+            transform: translateX(4px);
+        }
+
+        .lesson-card .lesson-icon {
+            font-size: 1.4rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .lesson-card .lesson-title {
+            font-weight: 700;
+            font-size: 0.88rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .lesson-card .lesson-body {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ─── Market Tile ─── */
+        .market-tile {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.2rem 1.3rem;
+            transition: all var(--transition-med);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .market-tile:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        }
+
+        .market-symbol {
+            font-weight: 800;
+            font-size: 1rem;
+        }
+
+        .market-pair {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .market-price {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-left: auto;
+        }
+
+        .market-change {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* ─── Donut Chart ─── */
+        .donut-container {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .donut-canvas {
+            width: 100px;
+            height: 100px;
+        }
+
+        .donut-legend {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .donut-legend div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .donut-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ─── Utility Classes ─── */
+        .positive { color: var(--green) !important; }
+        .negative { color: var(--red) !important; }
+        .neutral { color: var(--text-primary) !important; }
+        .warning { color: var(--amber) !important; }
+        .text-muted { color: var(--text-muted); }
+        .text-secondary { color: var(--text-secondary); }
+        .fw-800 { font-weight: 800; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mb-1 { margin-bottom: 0.5rem; }
+
+        /* ─── Empty State ─── */
+        .empty-state {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state .emoji {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state .empty-text {
+            font-size: 0.85rem;
+            max-width: 300px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* ─── Breaker Alert ─── */
+        .breaker-alert {
+            background: var(--red-soft);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.2rem;
+            margin-top: 1rem;
+            display: none;
+            animation: shake 0.5s ease;
+        }
+
+        .breaker-alert.active { display: block; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        /* ─── Strategy Badges ─── */
+        .strat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .strat-badge.passed { background: var(--green-soft); color: var(--green); }
+        .strat-badge.failed { background: var(--red-soft); color: var(--red); }
+
+        /* ─── Goal Progress Bar ─── */
+        .goal-bar {
+            width: 100%;
+            height: 10px;
+            background: var(--bg-input);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .goal-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.8s ease;
+        }
+
+        .goal-fill.on-track { background: linear-gradient(90deg, var(--green), #4ade80); }
+        .goal-fill.behind { background: linear-gradient(90deg, var(--amber), #fbbf24); }
+        .goal-fill.danger { background: linear-gradient(90deg, var(--red), #f87171); }
+
+        /* ═══════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════ */
+        @media (max-width: 900px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.open {
+                display: block;
+            }
+
+            .mobile-topbar {
+                display: flex;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1.25rem;
+                padding-top: calc(56px + 1.25rem);
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .card-columns {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-value { font-size: 1.4rem; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Top Bar -->
+    <div class="mobile-topbar" id="mobile-topbar">
+        <button class="hamburger" id="hamburger-btn" aria-label="Open menu">
+            <span></span><span></span><span></span>
+        </button>
+        <span class="mobile-title">Zenith Trading Bot</span>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- ═══════════ SIDEBAR ═══════════ -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Profile -->
+        <div class="profile-block">
+            <div class="profile-header">
+                <div class="profile-avatar">A</div>
+                <div class="profile-info">
+                    <h2>Zenith Trading Bot</h2>
+                    <div class="profile-version">Paper Trader · v2</div>
+                </div>
+            </div>
+            <span id="sidebar-status" class="profile-status live">
+                <span class="pulse-dot"></span>
+                Paper Trading
+            </span>
+        </div>
+
+        <!-- Timeframe Selector -->
+        <div class="tf-selector">
+            <div class="tf-label">⏱ Timeframe</div>
+            <div class="tf-pills" id="tf-pills">
+                <button class="tf-pill active" data-tf="1m">1m</button>
+                <button class="tf-pill" data-tf="3m">3m</button>
+                <button class="tf-pill" data-tf="5m">5m</button>
+                <button class="tf-pill" data-tf="15m">15m</button>
+                <button class="tf-pill" data-tf="30m">30m</button>
+                <button class="tf-pill" data-tf="1h">1h</button>
+                <button class="tf-pill" data-tf="4h">4h</button>
+                <button class="tf-pill" data-tf="1d">1d</button>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="nav" id="main-nav">
+            <div class="nav-item active" data-view="overview">
+                <span class="nav-icon">📊</span> Overview
+            </div>
+            <div class="nav-item" data-view="positions">
+                <span class="nav-icon">⚡</span> Positions
+                <span class="nav-badge" id="nav-pos-count">0</span>
+            </div>
+            <div class="nav-item" data-view="episodes">
+                <span class="nav-icon">🎯</span> Episodes
+            </div>
+            <div class="nav-item" data-view="evolution">
+                <span class="nav-icon">📈</span> Evolution
+            </div>
+            <div class="nav-item" data-view="strategies">
+                <span class="nav-icon">🧠</span> Strategies
+            </div>
+            <div class="nav-item" data-view="world">
+                <span class="nav-icon">🌍</span> World
+            </div>
+            <div class="nav-item" data-view="lessons">
+                <span class="nav-icon">📚</span> Lessons
+            </div>
+            <div class="nav-item" data-view="trades">
+                <span class="nav-icon">💱</span> Trades
+                <span class="nav-badge" id="nav-trade-count">0</span>
+            </div>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <p>Simulation on real live prices. Fake money, real lessons. Honest by design — it can lose everything, it never lies.</p>
+        </div>
+    </aside>
+
+    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <main class="main-content" id="main-content">
+
+        <!-- ─── OVERVIEW ─── -->
+        <section class="view-section active" id="view-overview">
+            <div class="section-header">
+                <h1>Overview</h1>
+                <div class="section-desc">Real-time account summary and performance snapshot</div>
+            </div>
+
+            <div id="alert-banner" class="alert-banner"></div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Account Equity</div>
+                    <div class="stat-value neutral" id="ov-equity">$10,000.00</div>
+                    <div class="stat-sub" id="ov-equity-change">+$0.00 · +0.00% this run · from $10,000</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Cash Available</div>
+                    <div class="stat-value neutral" id="ov-cash">$10,000.00</div>
+                    <div class="stat-sub" id="ov-open-count">0 open positions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Win Rate</div>
+                    <div class="stat-value neutral" id="ov-winrate">—</div>
+                    <div class="stat-sub" id="ov-trade-summary">0 trades</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Max Drawdown</div>
+                    <div class="stat-value neutral" id="ov-drawdown">0.0%</div>
+                    <div class="stat-sub" id="ov-dd-status">Within limits</div>
+                </div>
+            </div>
+
+            <!-- Goal Progress -->
+            <div class="glass-card">
+                <div class="card-title"><span class="icon">🎯</span> Goal Progress</div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.3rem;">
+                    <span class="stat-label">Goal: $500.00 · no deadline, fast as it can</span>
+                    <span class="mono" id="ov-goal-pct" style="font-size:0.85rem;font-weight:700;">0%</span>
+                </div>
+                <div class="goal-bar">
+                    <div class="goal-fill on-track" id="ov-goal-fill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Equity Chart -->
+            <div class="glass-card">
+                <div class="card-title"><span class="icon">📈</span> Equity Curve</div>
+                <div class="chart-container">
+                    <canvas id="equity-chart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Open Positions Summary -->
+            <div class="glass-card">
+                <div class="card-title"><span class="icon">📌</span> Open Positions</div>
+                <div id="ov-positions-container">
+                    <div class="empty-state">
+                        <div class="emoji">🔍</div>
+                        <div class="empty-text">No open positions</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── POSITIONS ─── -->
+        <section class="view-section" id="view-positions">
+            <div class="section-header">
+                <h1>Positions</h1>
+                <div class="section-desc">Active and recent positions with unrealized PnL</div>
+            </div>
+            <div class="glass-card">
+                <div id="pos-table-container">
+                    <div class="empty-state">
+                        <div class="emoji">⚡</div>
+                        <div class="empty-text">No open positions right now. The bot is waiting for a clear signal.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── EPISODES ─── -->
+        <section class="view-section" id="view-episodes">
+            <div class="section-header">
+                <h1>Episodes</h1>
+                <div class="section-desc">Each run goes until it hits the goal, runs out of time, or blows up</div>
+            </div>
+            <div class="card-columns">
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">📊</span> Run Performance</div>
+                    <div id="episode-bars-container" class="episode-bars">
+                        <!-- Rendered by JS -->
+                    </div>
+                    <div id="episode-numbers" style="display:flex;gap:0.6rem;"></div>
+                </div>
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">📋</span> Finished Runs</div>
+                    <div id="finished-runs-container">
+                        <div class="empty-state">
+                            <div class="emoji">🏁</div>
+                            <div class="empty-text">No completed runs yet. The first episode is in progress.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── EVOLUTION ─── -->
+        <section class="view-section" id="view-evolution">
+            <div class="section-header">
+                <h1>Evolution</h1>
+                <div class="section-desc">How the bot has evolved and improved over time</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Generation</div>
+                    <div class="stat-value neutral" id="evo-generation">1</div>
+                    <div class="stat-sub">Current generation</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Sharpe Ratio</div>
+                    <div class="stat-value neutral" id="evo-sharpe">—</div>
+                    <div class="stat-sub">Risk-adjusted returns</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Return</div>
+                    <div class="stat-value neutral" id="evo-return">0.00%</div>
+                    <div class="stat-sub" id="evo-return-sub">Since inception</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Best Strategy</div>
+                    <div class="stat-value neutral" id="evo-best-strat" style="font-size:1.1rem;">—</div>
+                    <div class="stat-sub" id="evo-best-strat-sub">Highest win rate</div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <div class="card-title"><span class="icon">📈</span> Full Equity History</div>
+                <div class="chart-container">
+                    <canvas id="evolution-chart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <div class="card-title"><span class="icon">📊</span> Performance Breakdown</div>
+                <div class="donut-container" id="evo-donut-container">
+                    <canvas class="donut-canvas" id="evo-donut"></canvas>
+                    <div class="donut-legend" id="evo-donut-legend">
+                        <div><span class="donut-dot" style="background:var(--green)"></span> Winning Trades: 0</div>
+                        <div><span class="donut-dot" style="background:var(--red)"></span> Losing Trades: 0</div>
+                        <div><span class="donut-dot" style="background:var(--text-muted)"></span> Break Even: 0</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── STRATEGIES ─── -->
+        <section class="view-section" id="view-strategies">
+            <div class="section-header">
+                <h1>Strategies</h1>
+                <div class="section-desc">Backtest results and live strategy performance</div>
+            </div>
+            <div class="glass-card">
+                <div id="strat-table-container">
+                    <div class="empty-state">
+                        <div class="emoji">🔄</div>
+                        <div class="empty-text">Running backtests on historical data...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── WORLD ─── -->
+        <section class="view-section" id="view-world">
+            <div class="section-header">
+                <h1>World</h1>
+                <div class="section-desc">Live market data and conditions</div>
+            </div>
+            <div class="stats-grid" id="world-tiles-container">
+                <!-- Rendered by JS -->
+            </div>
+            <div class="glass-card">
+                <div class="card-title"><span class="icon">🛡️</span> Risk Panel</div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span class="stat-label">Drawdown</span>
+                        <span id="world-risk-dd" class="mono" style="font-size:0.85rem;">0.0% / 15%</span>
+                    </div>
+                    <div class="risk-meter">
+                        <div class="risk-fill" id="world-risk-fill" style="width:0%;background:var(--green);"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-top:1rem;">
+                        <span class="stat-label">Kelly Fraction</span>
+                        <span id="world-kelly" class="mono" style="font-size:0.85rem;">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-top:0.5rem;">
+                        <span class="stat-label">Position Size</span>
+                        <span id="world-pos-size" class="mono" style="font-size:0.85rem;">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-top:0.5rem;">
+                        <span class="stat-label">Total Fees Paid</span>
+                        <span id="world-fees" class="mono" style="font-size:0.85rem;">$0.00</span>
+                    </div>
+                    <div id="world-breaker-alert" class="breaker-alert">
+                        ⚠️ <strong>Circuit Breaker Active</strong>
+                        <div id="world-breaker-reason" style="margin-top:0.3rem;font-size:0.8rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── LESSONS ─── -->
+        <section class="view-section" id="view-lessons">
+            <div class="section-header">
+                <h1>Lessons</h1>
+                <div class="section-desc">Key takeaways from your bot's trading journey</div>
+            </div>
+            <div id="lessons-container">
+                <!-- Rendered by JS -->
+            </div>
+        </section>
+
+        <!-- ─── TRADES ─── -->
+        <section class="view-section" id="view-trades">
+            <div class="section-header">
+                <h1>Trades</h1>
+                <div class="section-desc">Complete trade history log</div>
+            </div>
+            <div class="glass-card">
+                <div id="trades-table-container" style="max-height:600px;overflow-y:auto;">
+                    <div class="empty-state">
+                        <div class="emoji">⏳</div>
+                        <div class="empty-text">No trades yet — waiting for signals</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Timeframe Change Toast -->
+    <div class="tf-toast" id="tf-toast">
+        <span class="toast-icon">⏱</span>
+        <span id="tf-toast-text">Switching to 5m timeframe...</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/dashboard.js"></script>
+
+</body>
+</html>

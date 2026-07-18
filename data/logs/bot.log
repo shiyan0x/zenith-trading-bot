@@ -1,0 +1,1212 @@
+12:43:52 | INFO    | [INIT] Config loaded from D:\projects\trading bot\config\settings.json
+12:43:52 | INFO    | [WALLET] Initialized with $10000.00 fake USDT
+12:43:52 | INFO    | [LOGGER] Trade logs: D:\projects\trading bot\data\logs\trades.csv
+12:43:52 | INFO    | [INIT] Trading Bot initialized
+12:43:52 | INFO    | [INIT] Starting balance: $10,000.00 (FAKE)
+12:43:52 | INFO    | [INIT] Symbols: ['BTCUSDT', 'ETHUSDT']
+12:43:52 | INFO    | [INIT] Strategies: ['SMA Crossover', 'RSI Mean Revert', 'Donchian Breakout']
+12:43:52 | INFO    | [DASHBOARD] Starting at http://127.0.0.1:5000
+12:43:52 | INFO    | 
+============================================================
+12:43:52 | WARNING | Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+12:43:52 | INFO    |   🚀 HONEST AI TRADING BOT — STARTING
+12:43:52 | INFO    |   Real prices. Fake money. It never lies.
+12:43:52 | INFO    |   Dashboard: http://127.0.0.1:5000
+12:43:52 | INFO    | ============================================================
+
+12:43:52 | INFO    | [STEP 2] Fetching live price to verify connection...
+12:43:53 | INFO    | [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+12:43:53 | INFO    | [33mPress CTRL+C to quit[0m
+12:43:53 | INFO    | [STEP 2] ✅ Live BTCUSDT price: $62,919.51
+12:43:53 | INFO    | 
+============================================================
+12:43:53 | INFO    |   STEP 3: RUNNING BACKTESTS ON REAL HISTORICAL DATA
+12:43:53 | INFO    | ============================================================
+12:43:53 | INFO    | 
+[BACKTEST] Running SMA Crossover on BTCUSDT (1h, 90 days)
+12:43:53 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+12:43:54 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+12:43:54 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+12:43:54 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+12:43:54 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+12:43:54 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+12:43:55 | INFO    | 
+============================================================
+  SMA Crossover — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         26 (8W / 18L)
+  Win Rate:       30.8%
+  Total Return:   -0.32%
+  Max Drawdown:   10.98%
+  Sharpe Ratio:   -0.40
+  Profit Factor:  0.82
+  Avg Win:        $17.90
+  Avg Loss:       $9.72
+============================================================
+
+12:43:55 | INFO    | 
+============================================================
+  SMA Crossover — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         13 (3W / 10L)
+  Win Rate:       23.1%
+  Total Return:   -0.84%
+  Max Drawdown:   10.81%
+  Sharpe Ratio:   -1.01
+  Profit Factor:  0.48
+  Avg Win:        $25.64
+  Avg Loss:       $16.11
+============================================================
+
+12:43:55 | INFO    | [BACKTEST] ❌ SMA Crossover FAILED: too few trades (13 < 20), Sharpe too low (-1.01 < 0.5), negative return (-0.84%)
+12:43:55 | INFO    | 
+[BACKTEST] Running SMA Crossover on ETHUSDT (1h, 90 days)
+12:43:56 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+12:43:56 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+12:43:56 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+12:43:57 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:43:57] "GET /socket.io/?EIO=4&transport=polling&t=Pz5kT-S HTTP/1.1" 200 -
+12:43:57 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:43:57] "POST /socket.io/?EIO=4&transport=polling&t=Pz5kT-a&sid=xZwM9QWfxUoL62ykAAAA HTTP/1.1" 200 -
+12:43:57 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:43:57] "GET /socket.io/?EIO=4&transport=polling&t=Pz5kT-b&sid=xZwM9QWfxUoL62ykAAAA HTTP/1.1" 200 -
+12:43:57 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+12:43:57 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+12:43:57 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+12:43:57 | INFO    | 
+============================================================
+  SMA Crossover — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         26 (6W / 20L)
+  Win Rate:       23.1%
+  Total Return:   -1.32%
+  Max Drawdown:   11.93%
+  Sharpe Ratio:   -1.38
+  Profit Factor:  0.51
+  Avg Win:        $22.51
+  Avg Loss:       $13.36
+============================================================
+
+12:43:57 | INFO    | 
+============================================================
+  SMA Crossover — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         12 (4W / 8L)
+  Win Rate:       33.3%
+  Total Return:   -0.40%
+  Max Drawdown:   11.16%
+  Sharpe Ratio:   -0.28
+  Profit Factor:  0.79
+  Avg Win:        $36.91
+  Avg Loss:       $23.40
+============================================================
+
+12:43:57 | INFO    | [BACKTEST] ❌ SMA Crossover FAILED: too few trades (12 < 20), Sharpe too low (-0.28 < 0.5), negative return (-0.40%)
+12:43:57 | INFO    | 
+[BACKTEST] Running RSI Mean Revert on BTCUSDT (1h, 90 days)
+12:43:57 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+12:43:58 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+12:43:58 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+12:43:58 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+12:43:58 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+12:43:58 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+12:43:59 | INFO    | 
+============================================================
+  RSI Mean Revert — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         7 (5W / 2L)
+  Win Rate:       71.4%
+  Total Return:   -0.82%
+  Max Drawdown:   12.28%
+  Sharpe Ratio:   -0.47
+  Profit Factor:  0.56
+  Avg Win:        $21.18
+  Avg Loss:       $94.07
+============================================================
+
+12:43:59 | INFO    | 
+============================================================
+  RSI Mean Revert — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         3 (2W / 1L)
+  Win Rate:       66.7%
+  Total Return:   -0.12%
+  Max Drawdown:   10.74%
+  Sharpe Ratio:   -0.29
+  Profit Factor:  0.68
+  Avg Win:        $12.39
+  Avg Loss:       $36.57
+============================================================
+
+12:43:59 | INFO    | [BACKTEST] ❌ RSI Mean Revert FAILED: too few trades (3 < 20), Sharpe too low (-0.29 < 0.5), negative return (-0.12%)
+12:43:59 | INFO    | 
+[BACKTEST] Running RSI Mean Revert on ETHUSDT (1h, 90 days)
+12:44:00 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+12:44:01 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+12:44:03 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+12:44:03 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+12:44:03 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+12:44:03 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+12:44:04 | INFO    | 
+============================================================
+  RSI Mean Revert — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         7 (5W / 2L)
+  Win Rate:       71.4%
+  Total Return:   -0.79%
+  Max Drawdown:   13.03%
+  Sharpe Ratio:   -0.35
+  Profit Factor:  0.69
+  Avg Win:        $35.79
+  Avg Loss:       $129.14
+============================================================
+
+12:44:04 | INFO    | 
+============================================================
+  RSI Mean Revert — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         3 (2W / 1L)
+  Win Rate:       66.7%
+  Total Return:   +1.11%
+  Max Drawdown:   10.99%
+  Sharpe Ratio:   1.10
+  Profit Factor:  3.70
+  Avg Win:        $75.91
+  Avg Loss:       $41.07
+============================================================
+
+12:44:04 | INFO    | [BACKTEST] ❌ RSI Mean Revert FAILED: too few trades (3 < 20)
+12:44:04 | INFO    | 
+[BACKTEST] Running Donchian Breakout on BTCUSDT (1h, 90 days)
+12:44:04 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+12:44:05 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+12:44:05 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+12:44:06 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+12:44:06 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+12:44:06 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+12:44:06 | INFO    | 
+============================================================
+  Donchian Breakout — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         17 (5W / 12L)
+  Win Rate:       29.4%
+  Total Return:   -1.10%
+  Max Drawdown:   11.23%
+  Sharpe Ratio:   -1.39
+  Profit Factor:  0.45
+  Avg Win:        $18.09
+  Avg Loss:       $16.69
+============================================================
+
+12:44:06 | INFO    | 
+============================================================
+  Donchian Breakout — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         8 (2W / 6L)
+  Win Rate:       25.0%
+  Total Return:   -0.50%
+  Max Drawdown:   10.47%
+  Sharpe Ratio:   -0.75
+  Profit Factor:  0.49
+  Avg Win:        $24.30
+  Avg Loss:       $16.46
+============================================================
+
+12:44:06 | INFO    | [BACKTEST] ❌ Donchian Breakout FAILED: too few trades (8 < 20), Sharpe too low (-0.75 < 0.5), negative return (-0.50%)
+12:44:06 | INFO    | 
+[BACKTEST] Running Donchian Breakout on ETHUSDT (1h, 90 days)
+12:44:06 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+12:44:06 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+12:44:07 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+12:44:07 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+12:44:07 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+12:44:07 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+12:44:07 | INFO    | 
+============================================================
+  Donchian Breakout — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         16 (3W / 13L)
+  Win Rate:       18.8%
+  Total Return:   -1.55%
+  Max Drawdown:   11.62%
+  Sharpe Ratio:   -1.96
+  Profit Factor:  0.33
+  Avg Win:        $25.57
+  Avg Loss:       $17.80
+============================================================
+
+12:44:07 | INFO    | 
+============================================================
+  Donchian Breakout — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         6 (2W / 4L)
+  Win Rate:       33.3%
+  Total Return:   +0.23%
+  Max Drawdown:   10.52%
+  Sharpe Ratio:   0.22
+  Profit Factor:  1.30
+  Avg Win:        $51.13
+  Avg Loss:       $19.71
+============================================================
+
+12:44:07 | INFO    | [BACKTEST] ❌ Donchian Breakout FAILED: too few trades (6 < 20), Sharpe too low (0.22 < 0.5)
+12:44:07 | WARNING | 
+[BACKTEST] ❌ NO strategies passed the backtest.
+  This is honest: none of the tested strategies showed an edge on recent unseen data.
+  The bot will still run and show you live prices, but it won't take trades until a strategy passes.
+
+12:44:07 | INFO    |   [NOTE] Activating all strategies in observation mode (small position sizes) so you can watch them work.
+12:44:07 | INFO    | 
+============================================================
+12:44:07 | INFO    |   STEP 4: STARTING LIVE PAPER TRADING
+12:44:07 | INFO    |   Streaming BTCUSDT via WebSocket...
+12:44:07 | INFO    |   Active strategies: ['SMA Crossover', 'RSI Mean Revert', 'Donchian Breakout']
+12:44:07 | INFO    | ============================================================
+
+12:44:07 | INFO    | [WS] Connecting to wss://stream.binance.com:9443/ws/btcusdt@kline_1m
+12:44:08 | INFO    | [WS] Connected — streaming BTCUSDT 1m
+12:44:51 | INFO    | [KELLY] Not enough trades (0 < 10). Using minimum size.
+12:44:51 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+12:44:51 | INFO    | [ORDER] BUY 0.001589 BTCUSDT | Market: $62943.28 → Exec: $62969.32 | Slippage: 4.1 bps | Fee: $0.1000
+12:44:51 | INFO    | [WALLET] OPENED long 0.001589 BTCUSDT at $62969.32 | Fee: $0.1000 | Cash left: $9899.86
+12:45:51 | INFO    | [ORDER] SELL 0.001589 BTCUSDT | Market: $62912.01 → Exec: $62879.22 | Slippage: 5.2 bps | Fee: $0.0999
+12:45:51 | INFO    | [WALLET] ❌ CLOSED long 0.001589 BTCUSDT | Entry: $62969.32 → Exit: $62879.22 | PnL: $-0.3431 (-0.34%) | Fees: $0.1999 | Balance: $9999.66
+12:45:51 | INFO    | [KELLY] Not enough trades (1 < 10). Using minimum size.
+12:45:51 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+12:45:51 | INFO    | [ORDER] BUY 0.001589 BTCUSDT | Market: $62912.01 → Exec: $62939.65 | Slippage: 4.4 bps | Fee: $0.1000
+12:45:51 | INFO    | [WALLET] OPENED long 0.001589 BTCUSDT at $62939.65 | Fee: $0.1000 | Cash left: $9899.52
+12:46:51 | INFO    | [ORDER] SELL 0.001589 BTCUSDT | Market: $62924.22 → Exec: $62889.52 | Slippage: 5.5 bps | Fee: $0.1000
+12:46:51 | INFO    | [WALLET] ❌ CLOSED long 0.001589 BTCUSDT | Entry: $62939.65 → Exit: $62889.52 | PnL: $-0.2797 (-0.28%) | Fees: $0.2000 | Balance: $9999.38
+12:47:45 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:47:45] "GET / HTTP/1.1" 200 -
+12:47:45 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:47:45] "GET /dashboard.js HTTP/1.1" 200 -
+12:47:46 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:47:46] "GET /socket.io/?EIO=4&transport=polling&t=Pz5lLv0 HTTP/1.1" 200 -
+12:47:46 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:47:46] "POST /socket.io/?EIO=4&transport=polling&t=Pz5lLvF&sid=YsTJW-roRh2uU1fdAAAC HTTP/1.1" 200 -
+12:47:46 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:47:46] "GET /socket.io/?EIO=4&transport=polling&t=Pz5lLvH&sid=YsTJW-roRh2uU1fdAAAC HTTP/1.1" 200 -
+12:47:46 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:47:46] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+12:47:46 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:47:46] "GET /socket.io/?EIO=4&transport=polling&t=Pz5lL-V&sid=YsTJW-roRh2uU1fdAAAC HTTP/1.1" 200 -
+12:47:46 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:47:46] "POST /socket.io/?EIO=4&transport=polling&t=Pz5lM08&sid=YsTJW-roRh2uU1fdAAAC HTTP/1.1" 200 -
+12:47:51 | INFO    | [KELLY] Not enough trades (2 < 10). Using minimum size.
+12:47:51 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+12:47:51 | INFO    | [ORDER] BUY 0.001588 BTCUSDT | Market: $62962.52 → Exec: $62988.34 | Slippage: 4.1 bps | Fee: $0.1000
+12:47:51 | INFO    | [WALLET] OPENED long 0.001588 BTCUSDT at $62988.34 | Fee: $0.1000 | Cash left: $9899.24
+12:48:51 | INFO    | [ORDER] SELL 0.001588 BTCUSDT | Market: $63014.01 → Exec: $62979.57 | Slippage: 5.5 bps | Fee: $0.1000
+12:48:51 | INFO    | [WALLET] ❌ CLOSED long 0.001588 BTCUSDT | Entry: $62988.34 → Exit: $62979.57 | PnL: $-0.2140 (-0.21%) | Fees: $0.2001 | Balance: $9999.16
+12:48:51 | INFO    | [KELLY] Not enough trades (3 < 10). Using minimum size.
+12:48:51 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+12:48:51 | INFO    | [ORDER] BUY 0.001587 BTCUSDT | Market: $63014.01 → Exec: $63042.99 | Slippage: 4.6 bps | Fee: $0.1000
+12:48:51 | INFO    | [WALLET] OPENED long 0.001587 BTCUSDT at $63042.99 | Fee: $0.1000 | Cash left: $9899.03
+12:48:52 | INFO    | 127.0.0.1 - - [09/Jul/2026 12:48:52] "GET /socket.io/?EIO=4&transport=websocket&sid=xZwM9QWfxUoL62ykAAAA HTTP/1.1" 200 -
+12:49:51 | INFO    | [ORDER] SELL 0.001587 BTCUSDT | Market: $63081.99 → Exec: $63051.53 | Slippage: 4.8 bps | Fee: $0.1001
+12:49:51 | INFO    | [WALLET] ❌ CLOSED long 0.001587 BTCUSDT | Entry: $63042.99 → Exit: $63051.53 | PnL: $-0.1865 (-0.19%) | Fees: $0.2001 | Balance: $9998.98
+12:49:51 | INFO    | [KELLY] Not enough trades (4 < 10). Using minimum size.
+12:49:51 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+12:49:51 | INFO    | [ORDER] BUY 0.001585 BTCUSDT | Market: $63081.99 → Exec: $63120.57 | Slippage: 6.1 bps | Fee: $0.1001
+12:49:51 | INFO    | [WALLET] OPENED long 0.001585 BTCUSDT at $63120.57 | Fee: $0.1001 | Cash left: $9898.83
+12:50:51 | INFO    | [ORDER] SELL 0.001585 BTCUSDT | Market: $63066.01 → Exec: $63029.50 | Slippage: 5.8 bps | Fee: $0.0999
+12:50:51 | INFO    | [WALLET] ❌ CLOSED long 0.001585 BTCUSDT | Entry: $63120.57 → Exit: $63029.50 | PnL: $-0.3443 (-0.34%) | Fees: $0.2000 | Balance: $9998.63
+17:51:07 | INFO    | [INIT] Config loaded from D:\projects\trading bot\config\settings.json
+17:51:07 | INFO    | [WALLET] Initialized with $10000.00 fake USDT
+17:51:07 | INFO    | [LOGGER] Trade logs: D:\projects\trading bot\data\logs\trades.csv
+17:51:07 | INFO    | [INIT] Trading Bot initialized
+17:51:07 | INFO    | [INIT] Starting balance: $10,000.00 (FAKE)
+17:51:07 | INFO    | [INIT] Symbols: ['BTCUSDT', 'ETHUSDT']
+17:51:07 | INFO    | [INIT] Strategies: ['SMA Crossover', 'RSI Mean Revert', 'Donchian Breakout']
+17:51:07 | INFO    | [DASHBOARD] Starting at http://127.0.0.1:5000
+17:51:07 | INFO    | 
+============================================================
+17:51:07 | WARNING | Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+17:51:07 | INFO    |   🚀 HONEST AI TRADING BOT — STARTING
+17:51:07 | INFO    |   Real prices. Fake money. It never lies.
+17:51:07 | INFO    |   Dashboard: http://127.0.0.1:5000
+17:51:07 | INFO    | ============================================================
+
+17:51:07 | INFO    | [STEP 2] Fetching live price to verify connection...
+17:51:07 | INFO    | [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+17:51:07 | INFO    | [33mPress CTRL+C to quit[0m
+17:51:08 | INFO    | [STEP 2] ✅ Live BTCUSDT price: $62,764.01
+17:51:08 | INFO    | 
+============================================================
+17:51:08 | INFO    |   STEP 3: RUNNING BACKTESTS ON REAL HISTORICAL DATA
+17:51:08 | INFO    | ============================================================
+17:51:08 | INFO    | 
+[BACKTEST] Running SMA Crossover on BTCUSDT (1h, 90 days)
+17:51:09 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+17:51:10 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+17:51:10 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+17:51:11 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+17:51:11 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+17:51:11 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+17:51:11 | INFO    | 
+============================================================
+  SMA Crossover — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         25 (8W / 17L)
+  Win Rate:       32.0%
+  Total Return:   +0.04%
+  Max Drawdown:   10.98%
+  Sharpe Ratio:   0.06
+  Profit Factor:  1.03
+  Avg Win:        $18.76
+  Avg Loss:       $8.59
+============================================================
+
+17:51:11 | INFO    | 
+============================================================
+  SMA Crossover — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         13 (3W / 10L)
+  Win Rate:       23.1%
+  Total Return:   -0.87%
+  Max Drawdown:   10.85%
+  Sharpe Ratio:   -1.05
+  Profit Factor:  0.47
+  Avg Win:        $25.66
+  Avg Loss:       $16.41
+============================================================
+
+17:51:11 | INFO    | [BACKTEST] ❌ SMA Crossover FAILED: too few trades (13 < 20), Sharpe too low (-1.05 < 0.5), negative return (-0.87%)
+17:51:11 | INFO    | 
+[BACKTEST] Running SMA Crossover on ETHUSDT (1h, 90 days)
+17:51:13 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+17:51:15 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+17:51:16 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+17:51:16 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+17:51:16 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+17:51:16 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+17:51:16 | INFO    | 
+============================================================
+  SMA Crossover — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         26 (6W / 20L)
+  Win Rate:       23.1%
+  Total Return:   -1.30%
+  Max Drawdown:   11.94%
+  Sharpe Ratio:   -1.35
+  Profit Factor:  0.51
+  Avg Win:        $22.90
+  Avg Loss:       $13.36
+============================================================
+
+17:51:16 | INFO    | 
+============================================================
+  SMA Crossover — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         13 (4W / 9L)
+  Win Rate:       30.8%
+  Total Return:   -0.50%
+  Max Drawdown:   11.16%
+  Sharpe Ratio:   -0.36
+  Profit Factor:  0.75
+  Avg Win:        $36.96
+  Avg Loss:       $21.98
+============================================================
+
+17:51:16 | INFO    | [BACKTEST] ❌ SMA Crossover FAILED: too few trades (13 < 20), Sharpe too low (-0.36 < 0.5), negative return (-0.50%)
+17:51:16 | INFO    | 
+[BACKTEST] Running RSI Mean Revert on BTCUSDT (1h, 90 days)
+17:51:17 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+17:51:17 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+17:51:18 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+17:51:18 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+17:51:18 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+17:51:18 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+17:51:21 | INFO    | 
+============================================================
+  RSI Mean Revert — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         7 (5W / 2L)
+  Win Rate:       71.4%
+  Total Return:   -0.76%
+  Max Drawdown:   12.28%
+  Sharpe Ratio:   -0.43
+  Profit Factor:  0.60
+  Avg Win:        $22.40
+  Avg Loss:       $93.95
+============================================================
+
+17:51:21 | INFO    | 
+============================================================
+  RSI Mean Revert — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         3 (2W / 1L)
+  Win Rate:       66.7%
+  Total Return:   -0.14%
+  Max Drawdown:   10.74%
+  Sharpe Ratio:   -0.37
+  Profit Factor:  0.61
+  Avg Win:        $11.13
+  Avg Loss:       $36.62
+============================================================
+
+17:51:21 | INFO    | [BACKTEST] ❌ RSI Mean Revert FAILED: too few trades (3 < 20), Sharpe too low (-0.37 < 0.5), negative return (-0.14%)
+17:51:21 | INFO    | 
+[BACKTEST] Running RSI Mean Revert on ETHUSDT (1h, 90 days)
+17:51:27 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+17:51:29 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+17:51:30 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+17:51:30 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+17:51:30 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+17:51:30 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+17:51:32 | INFO    | 
+============================================================
+  RSI Mean Revert — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         7 (5W / 2L)
+  Win Rate:       71.4%
+  Total Return:   -0.80%
+  Max Drawdown:   13.03%
+  Sharpe Ratio:   -0.35
+  Profit Factor:  0.69
+  Avg Win:        $35.78
+  Avg Loss:       $129.21
+============================================================
+
+17:51:32 | INFO    | 
+============================================================
+  RSI Mean Revert — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         3 (2W / 1L)
+  Win Rate:       66.7%
+  Total Return:   +1.11%
+  Max Drawdown:   10.99%
+  Sharpe Ratio:   1.10
+  Profit Factor:  3.70
+  Avg Win:        $76.07
+  Avg Loss:       $41.13
+============================================================
+
+17:51:32 | INFO    | [BACKTEST] ❌ RSI Mean Revert FAILED: too few trades (3 < 20)
+17:51:32 | INFO    | 
+[BACKTEST] Running Donchian Breakout on BTCUSDT (1h, 90 days)
+17:51:33 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+17:51:33 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+17:51:35 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+17:51:37 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+17:51:37 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+17:51:37 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+17:51:37 | INFO    | 
+============================================================
+  Donchian Breakout — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         17 (5W / 12L)
+  Win Rate:       29.4%
+  Total Return:   -1.03%
+  Max Drawdown:   11.23%
+  Sharpe Ratio:   -1.30
+  Profit Factor:  0.48
+  Avg Win:        $19.24
+  Avg Loss:       $16.64
+============================================================
+
+17:51:37 | INFO    | 
+============================================================
+  Donchian Breakout — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         8 (2W / 6L)
+  Win Rate:       25.0%
+  Total Return:   -0.53%
+  Max Drawdown:   10.47%
+  Sharpe Ratio:   -0.80
+  Profit Factor:  0.48
+  Avg Win:        $24.18
+  Avg Loss:       $16.94
+============================================================
+
+17:51:37 | INFO    | [BACKTEST] ❌ Donchian Breakout FAILED: too few trades (8 < 20), Sharpe too low (-0.80 < 0.5), negative return (-0.53%)
+17:51:37 | INFO    | 
+[BACKTEST] Running Donchian Breakout on ETHUSDT (1h, 90 days)
+17:51:38 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+17:51:39 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+17:51:41 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+17:51:46 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+17:51:46 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+17:51:46 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+17:51:47 | INFO    | 
+============================================================
+  Donchian Breakout — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         16 (3W / 13L)
+  Win Rate:       18.8%
+  Total Return:   -1.52%
+  Max Drawdown:   11.62%
+  Sharpe Ratio:   -1.93
+  Profit Factor:  0.33
+  Avg Win:        $25.54
+  Avg Loss:       $17.62
+============================================================
+
+17:51:47 | INFO    | 
+============================================================
+  Donchian Breakout — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         6 (2W / 4L)
+  Win Rate:       33.3%
+  Total Return:   +0.24%
+  Max Drawdown:   10.52%
+  Sharpe Ratio:   0.23
+  Profit Factor:  1.30
+  Avg Win:        $51.07
+  Avg Loss:       $19.64
+============================================================
+
+17:51:47 | INFO    | [BACKTEST] ❌ Donchian Breakout FAILED: too few trades (6 < 20), Sharpe too low (0.23 < 0.5)
+17:51:47 | WARNING | 
+[BACKTEST] ❌ NO strategies passed the backtest.
+  This is honest: none of the tested strategies showed an edge on recent unseen data.
+  The bot will still run and show you live prices, but it won't take trades until a strategy passes.
+
+17:51:47 | INFO    |   [NOTE] Activating all strategies in observation mode (small position sizes) so you can watch them work.
+17:51:47 | INFO    | 
+============================================================
+17:51:47 | INFO    |   STEP 4: STARTING LIVE PAPER TRADING
+17:51:47 | INFO    |   Streaming BTCUSDT via WebSocket...
+17:51:47 | INFO    |   Active strategies: ['SMA Crossover', 'RSI Mean Revert', 'Donchian Breakout']
+17:51:47 | INFO    | ============================================================
+
+17:51:47 | INFO    | [WS] Connecting to wss://stream.binance.com:9443/ws/btcusdt@kline_1m
+17:51:49 | INFO    | [WS] Connected — streaming BTCUSDT 1m
+17:51:59 | INFO    | [KELLY] Not enough trades (0 < 10). Using minimum size.
+17:51:59 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+17:51:59 | INFO    | [ORDER] BUY 0.001594 BTCUSDT | Market: $62750.00 → Exec: $62776.04 | Slippage: 4.1 bps | Fee: $0.1000
+17:51:59 | INFO    | [WALLET] OPENED long 0.001594 BTCUSDT at $62776.04 | Fee: $0.1000 | Cash left: $9899.86
+17:52:10 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:10] "GET / HTTP/1.1" 200 -
+17:52:10 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:10] "GET /dashboard.js HTTP/1.1" 200 -
+17:52:11 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:11] "GET /socket.io/?EIO=4&transport=polling&t=Pz6r181 HTTP/1.1" 200 -
+17:52:11 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:11] "POST /socket.io/?EIO=4&transport=polling&t=Pz6r19V&sid=2IpPbgMX120nRwTUAAAA HTTP/1.1" 200 -
+17:52:11 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:11] "GET /socket.io/?EIO=4&transport=polling&t=Pz6r19i&sid=2IpPbgMX120nRwTUAAAA HTTP/1.1" 200 -
+17:52:11 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:11] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+17:52:11 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:11] "GET /socket.io/?EIO=4&transport=polling&t=Pz6r1Fu&sid=2IpPbgMX120nRwTUAAAA HTTP/1.1" 200 -
+17:52:12 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:12] "POST /socket.io/?EIO=4&transport=polling&t=Pz6r1Ig&sid=2IpPbgMX120nRwTUAAAA HTTP/1.1" 200 -
+17:52:12 | INFO    | 127.0.0.1 - - [09/Jul/2026 17:52:12] "GET /socket.io/?EIO=4&transport=polling&t=Pz6r1MB&sid=2IpPbgMX120nRwTUAAAA HTTP/1.1" 200 -
+17:52:59 | INFO    | [ORDER] SELL 0.001594 BTCUSDT | Market: $62719.70 → Exec: $62686.49 | Slippage: 5.3 bps | Fee: $0.0999
+17:52:59 | INFO    | [WALLET] ❌ CLOSED long 0.001594 BTCUSDT | Entry: $62776.04 → Exit: $62686.49 | PnL: $-0.3426 (-0.34%) | Fees: $0.1999 | Balance: $9999.66
+09:37:19 | INFO    | [INIT] Config loaded from D:\projects\trading bot\config\settings.json
+09:37:19 | INFO    | [WALLET] Initialized with $10000.00 fake USDT
+09:37:19 | INFO    | [LOGGER] Trade logs: D:\projects\trading bot\data\logs\trades.csv
+09:37:19 | INFO    | [INIT] Trading Bot initialized
+09:37:19 | INFO    | [INIT] Starting balance: $10,000.00 (FAKE)
+09:37:19 | INFO    | [INIT] Symbols: ['BTCUSDT', 'ETHUSDT']
+09:37:19 | INFO    | [INIT] Strategies: ['SMA Crossover', 'RSI Mean Revert', 'Donchian Breakout']
+09:37:19 | INFO    | [DASHBOARD] Starting at http://127.0.0.1:5000
+09:37:19 | INFO    | 
+============================================================
+09:37:19 | WARNING | Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+09:37:19 | INFO    |   🚀 HONEST AI TRADING BOT — STARTING
+09:37:19 | INFO    |   Real prices. Fake money. It never lies.
+09:37:19 | INFO    |   Dashboard: http://127.0.0.1:5000
+09:37:19 | INFO    | ============================================================
+
+09:37:19 | INFO    | [STEP 2] Fetching live price to verify connection...
+09:37:19 | INFO    | [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+09:37:19 | INFO    | [33mPress CTRL+C to quit[0m
+09:37:20 | INFO    | [STEP 2] ✅ Live BTCUSDT price: $64,105.97
+09:37:20 | INFO    | 
+============================================================
+09:37:20 | INFO    |   STEP 3: RUNNING BACKTESTS ON REAL HISTORICAL DATA
+09:37:20 | INFO    | ============================================================
+09:37:20 | INFO    | 
+[BACKTEST] Running SMA Crossover on BTCUSDT (1h, 90 days)
+09:37:21 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:37:22 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:37:24 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+09:37:24 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+09:37:24 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+09:37:24 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:37:25 | INFO    | 
+============================================================
+  SMA Crossover — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         26 (9W / 17L)
+  Win Rate:       34.6%
+  Total Return:   +0.11%
+  Max Drawdown:   10.97%
+  Sharpe Ratio:   0.15
+  Profit Factor:  1.08
+  Avg Win:        $17.41
+  Avg Loss:       $8.56
+============================================================
+
+09:37:25 | INFO    | 
+============================================================
+  SMA Crossover — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         12 (3W / 9L)
+  Win Rate:       25.0%
+  Total Return:   -0.76%
+  Max Drawdown:   10.88%
+  Sharpe Ratio:   -0.90
+  Profit Factor:  0.52
+  Avg Win:        $27.17
+  Avg Loss:       $17.54
+============================================================
+
+09:37:25 | INFO    | [BACKTEST] ❌ SMA Crossover FAILED: too few trades (12 < 20), Sharpe too low (-0.90 < 0.5), negative return (-0.76%)
+09:37:25 | INFO    | 
+[BACKTEST] Running SMA Crossover on ETHUSDT (1h, 90 days)
+09:37:26 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:37:26 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:37:27 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+09:37:31 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+09:37:31 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+09:37:31 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:37:31 | INFO    | 
+============================================================
+  SMA Crossover — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         27 (6W / 21L)
+  Win Rate:       22.2%
+  Total Return:   -1.30%
+  Max Drawdown:   11.93%
+  Sharpe Ratio:   -1.36
+  Profit Factor:  0.51
+  Avg Win:        $22.79
+  Avg Loss:       $12.71
+============================================================
+
+09:37:31 | INFO    | 
+============================================================
+  SMA Crossover — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         12 (4W / 8L)
+  Win Rate:       33.3%
+  Total Return:   -0.53%
+  Max Drawdown:   11.16%
+  Sharpe Ratio:   -0.39
+  Profit Factor:  0.72
+  Avg Win:        $33.47
+  Avg Loss:       $23.33
+============================================================
+
+09:37:31 | INFO    | [BACKTEST] ❌ SMA Crossover FAILED: too few trades (12 < 20), Sharpe too low (-0.39 < 0.5), negative return (-0.53%)
+09:37:31 | INFO    | 
+[BACKTEST] Running RSI Mean Revert on BTCUSDT (1h, 90 days)
+09:37:33 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:37:33 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:37:34 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+09:37:34 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+09:37:34 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+09:37:34 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:37:35 | INFO    | 
+============================================================
+  RSI Mean Revert — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         7 (5W / 2L)
+  Win Rate:       71.4%
+  Total Return:   -0.62%
+  Max Drawdown:   12.28%
+  Sharpe Ratio:   -0.34
+  Profit Factor:  0.67
+  Avg Win:        $25.20
+  Avg Loss:       $94.12
+============================================================
+
+09:37:35 | INFO    | 
+============================================================
+  RSI Mean Revert — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         3 (2W / 1L)
+  Win Rate:       66.7%
+  Total Return:   +0.05%
+  Max Drawdown:   10.74%
+  Sharpe Ratio:   0.10
+  Profit Factor:  1.13
+  Avg Win:        $20.78
+  Avg Loss:       $36.69
+============================================================
+
+09:37:35 | INFO    | [BACKTEST] ❌ RSI Mean Revert FAILED: too few trades (3 < 20), Sharpe too low (0.10 < 0.5)
+09:37:35 | INFO    | 
+[BACKTEST] Running RSI Mean Revert on ETHUSDT (1h, 90 days)
+09:37:35 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:37:36 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:37:36 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+09:37:36 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+09:37:36 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+09:37:36 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:37:37 | INFO    | 
+============================================================
+  RSI Mean Revert — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         6 (4W / 2L)
+  Win Rate:       66.7%
+  Total Return:   -1.54%
+  Max Drawdown:   13.03%
+  Sharpe Ratio:   -0.77
+  Profit Factor:  0.40
+  Avg Win:        $25.66
+  Avg Loss:       $128.22
+============================================================
+
+09:37:37 | INFO    | 
+============================================================
+  RSI Mean Revert — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         3 (2W / 1L)
+  Win Rate:       66.7%
+  Total Return:   +1.11%
+  Max Drawdown:   10.99%
+  Sharpe Ratio:   1.10
+  Profit Factor:  3.70
+  Avg Win:        $76.00
+  Avg Loss:       $41.14
+============================================================
+
+09:37:37 | INFO    | [BACKTEST] ❌ RSI Mean Revert FAILED: too few trades (3 < 20)
+09:37:37 | INFO    | 
+[BACKTEST] Running Donchian Breakout on BTCUSDT (1h, 90 days)
+09:37:39 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:37:43 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:37:48 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+09:37:49 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+09:37:49 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+09:37:49 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:37:49 | INFO    | 
+============================================================
+  Donchian Breakout — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         16 (5W / 11L)
+  Win Rate:       31.2%
+  Total Return:   -0.61%
+  Max Drawdown:   11.20%
+  Sharpe Ratio:   -0.76
+  Profit Factor:  0.64
+  Avg Win:        $22.05
+  Avg Loss:       $15.58
+============================================================
+
+09:37:49 | INFO    | 
+============================================================
+  Donchian Breakout — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         7 (3W / 4L)
+  Win Rate:       42.9%
+  Total Return:   -0.32%
+  Max Drawdown:   10.48%
+  Sharpe Ratio:   -0.45
+  Profit Factor:  0.67
+  Avg Win:        $21.12
+  Avg Loss:       $23.79
+============================================================
+
+09:37:49 | INFO    | [BACKTEST] ❌ Donchian Breakout FAILED: too few trades (7 < 20), Sharpe too low (-0.45 < 0.5), negative return (-0.32%)
+09:37:49 | INFO    | 
+[BACKTEST] Running Donchian Breakout on ETHUSDT (1h, 90 days)
+09:37:49 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:37:49 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:37:50 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+09:37:50 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+09:37:50 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+09:37:50 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:37:50 | INFO    | 
+============================================================
+  Donchian Breakout — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         15 (4W / 11L)
+  Win Rate:       26.7%
+  Total Return:   -1.26%
+  Max Drawdown:   11.62%
+  Sharpe Ratio:   -1.59
+  Profit Factor:  0.39
+  Avg Win:        $20.04
+  Avg Loss:       $18.70
+============================================================
+
+09:37:50 | INFO    | 
+============================================================
+  Donchian Breakout — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         6 (2W / 4L)
+  Win Rate:       33.3%
+  Total Return:   +0.37%
+  Max Drawdown:   10.52%
+  Sharpe Ratio:   0.35
+  Profit Factor:  1.50
+  Avg Win:        $54.49
+  Avg Loss:       $18.11
+============================================================
+
+09:37:50 | INFO    | [BACKTEST] ❌ Donchian Breakout FAILED: too few trades (6 < 20), Sharpe too low (0.35 < 0.5)
+09:37:50 | WARNING | 
+[BACKTEST] ❌ NO strategies passed the backtest.
+  This is honest: none of the tested strategies showed an edge on recent unseen data.
+  The bot will still run and show you live prices, but it won't take trades until a strategy passes.
+
+09:37:50 | INFO    |   [NOTE] Activating all strategies in observation mode (small position sizes) so you can watch them work.
+09:37:50 | INFO    | 
+============================================================
+09:37:50 | INFO    |   STEP 4: STARTING LIVE PAPER TRADING
+09:37:50 | INFO    |   Streaming BTCUSDT via WebSocket...
+09:37:50 | INFO    |   Active strategies: ['SMA Crossover', 'RSI Mean Revert', 'Donchian Breakout']
+09:37:50 | INFO    | ============================================================
+
+09:37:50 | INFO    | [WS] Connecting to wss://stream.binance.com:9443/ws/btcusdt@kline_1m
+09:37:51 | INFO    | [WS] Connected — streaming BTCUSDT 1m
+09:37:57 | INFO    | [KELLY] Not enough trades (0 < 10). Using minimum size.
+09:37:57 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+09:37:57 | INFO    | [ORDER] BUY 0.001560 BTCUSDT | Market: $64100.00 → Exec: $64127.20 | Slippage: 4.2 bps | Fee: $0.1000
+09:37:57 | INFO    | [WALLET] OPENED long 0.001560 BTCUSDT at $64127.20 | Fee: $0.1000 | Cash left: $9899.86
+09:38:05 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:38:05] "GET / HTTP/1.1" 200 -
+09:38:05 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:38:05] "GET /dashboard.js HTTP/1.1" 200 -
+09:38:05 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:38:05] "GET /socket.io/?EIO=4&transport=polling&t=PzFN716 HTTP/1.1" 200 -
+09:38:06 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:38:06] "POST /socket.io/?EIO=4&transport=polling&t=PzFN71G&sid=yu7Olgr-hAk8RGxMAAAA HTTP/1.1" 200 -
+09:38:06 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:38:06] "GET /socket.io/?EIO=4&transport=polling&t=PzFN71I&sid=yu7Olgr-hAk8RGxMAAAA HTTP/1.1" 200 -
+09:38:06 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:38:06] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+09:38:57 | INFO    | [ORDER] SELL 0.001560 BTCUSDT | Market: $64090.79 → Exec: $64063.76 | Slippage: 4.2 bps | Fee: $0.0999
+09:38:57 | INFO    | [WALLET] ❌ CLOSED long 0.001560 BTCUSDT | Entry: $64127.20 → Exit: $64063.76 | PnL: $-0.2990 (-0.30%) | Fees: $0.2000 | Balance: $9999.70
+09:39:14 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:39:14] "GET / HTTP/1.1" 200 -
+09:39:14 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:39:14] "GET /socket.io/?EIO=4&transport=websocket&sid=yu7Olgr-hAk8RGxMAAAA HTTP/1.1" 200 -
+09:39:14 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:39:14] "[36mGET /dashboard.js HTTP/1.1[0m" 304 -
+09:39:14 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:39:14] "GET /socket.io/?EIO=4&transport=polling&t=PzFNNi4 HTTP/1.1" 200 -
+09:39:14 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:39:14] "POST /socket.io/?EIO=4&transport=polling&t=PzFNNlk&sid=XEoAgmc-DR2VlpDGAAAC HTTP/1.1" 200 -
+09:39:14 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:39:14] "GET /socket.io/?EIO=4&transport=polling&t=PzFNNll&sid=XEoAgmc-DR2VlpDGAAAC HTTP/1.1" 200 -
+09:41:16 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:41:16] "GET / HTTP/1.1" 200 -
+09:41:16 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:41:16] "GET /socket.io/?EIO=4&transport=websocket&sid=XEoAgmc-DR2VlpDGAAAC HTTP/1.1" 200 -
+09:41:16 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:41:16] "[36mGET /dashboard.js HTTP/1.1[0m" 304 -
+09:41:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:41:17] "GET /socket.io/?EIO=4&transport=polling&t=PzFNrfe HTTP/1.1" 200 -
+09:41:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:41:17] "POST /socket.io/?EIO=4&transport=polling&t=PzFNrjO&sid=eqUvOvUlGLKwuCQyAAAE HTTP/1.1" 200 -
+09:41:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:41:17] "GET /socket.io/?EIO=4&transport=polling&t=PzFNrjQ&sid=eqUvOvUlGLKwuCQyAAAE HTTP/1.1" 200 -
+09:43:50 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:43:50] "GET / HTTP/1.1" 200 -
+09:43:50 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:43:50] "GET /socket.io/?EIO=4&transport=websocket&sid=eqUvOvUlGLKwuCQyAAAE HTTP/1.1" 200 -
+09:43:50 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:43:50] "[36mGET /dashboard.js HTTP/1.1[0m" 304 -
+09:43:50 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:43:50] "GET /socket.io/?EIO=4&transport=polling&t=PzFORCc HTTP/1.1" 200 -
+09:43:51 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:43:51] "POST /socket.io/?EIO=4&transport=polling&t=PzFORGU&sid=Hr7oefVQl5RkzdGGAAAG HTTP/1.1" 200 -
+09:43:51 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:43:51] "GET /socket.io/?EIO=4&transport=polling&t=PzFORGV&sid=Hr7oefVQl5RkzdGGAAAG HTTP/1.1" 200 -
+09:44:55 | WARNING | [WS] Connection closed: no close frame received or sent. Reconnecting in 5s...
+09:45:02 | INFO    | [WS] Connected — streaming BTCUSDT 1m
+09:45:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:45:17] "GET / HTTP/1.1" 200 -
+09:45:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:45:17] "GET /socket.io/?EIO=4&transport=websocket&sid=Hr7oefVQl5RkzdGGAAAG HTTP/1.1" 200 -
+09:45:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:45:17] "[36mGET /dashboard.js HTTP/1.1[0m" 304 -
+09:45:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:45:17] "GET /socket.io/?EIO=4&transport=polling&t=PzFOmJu HTTP/1.1" 200 -
+09:45:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:45:17] "POST /socket.io/?EIO=4&transport=polling&t=PzFOmNU&sid=0TMMlhb9Xal4YVWaAAAI HTTP/1.1" 200 -
+09:45:17 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:45:17] "GET /socket.io/?EIO=4&transport=polling&t=PzFOmNW&sid=0TMMlhb9Xal4YVWaAAAI HTTP/1.1" 200 -
+09:45:57 | INFO    | [KELLY] Not enough trades (1 < 10). Using minimum size.
+09:45:57 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+09:45:57 | INFO    | [ORDER] BUY 0.001559 BTCUSDT | Market: $64130.00 → Exec: $64159.75 | Slippage: 4.6 bps | Fee: $0.1000
+09:45:57 | INFO    | [WALLET] OPENED long 0.001559 BTCUSDT at $64159.75 | Fee: $0.1000 | Cash left: $9899.56
+09:46:57 | INFO    | [ORDER] SELL 0.001559 BTCUSDT | Market: $64105.06 → Exec: $64067.12 | Slippage: 5.9 bps | Fee: $0.0999
+09:46:57 | INFO    | [WALLET] ❌ CLOSED long 0.001559 BTCUSDT | Entry: $64159.75 → Exit: $64067.12 | PnL: $-0.3444 (-0.34%) | Fees: $0.1999 | Balance: $9999.36
+09:47:46 | INFO    | [INIT] Config loaded from D:\projects\trading bot\config\settings.json
+09:47:46 | INFO    | [WALLET] Initialized with $10000.00 fake USDT
+09:47:46 | INFO    | [LOGGER] Trade logs: D:\projects\trading bot\data\logs\trades.csv
+09:47:46 | INFO    | [INIT] Trading Bot initialized
+09:47:46 | INFO    | [INIT] Starting balance: $10,000.00 (FAKE)
+09:47:46 | INFO    | [INIT] Symbols: ['BTCUSDT', 'ETHUSDT']
+09:47:46 | INFO    | [INIT] Strategies: ['SMA Crossover', 'RSI Mean Revert', 'Donchian Breakout']
+09:47:46 | INFO    | [DASHBOARD] Starting at http://127.0.0.1:5000
+09:47:46 | INFO    | 
+============================================================
+09:47:46 | WARNING | Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+09:47:46 | INFO    |   🚀 HONEST AI TRADING BOT — STARTING
+09:47:46 | INFO    |   Real prices. Fake money. It never lies.
+09:47:46 | INFO    |   Dashboard: http://127.0.0.1:5000
+09:47:46 | INFO    | ============================================================
+
+09:47:46 | INFO    | [STEP 2] Fetching live price to verify connection...
+09:47:46 | INFO    | [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+09:47:46 | INFO    | [33mPress CTRL+C to quit[0m
+09:47:49 | INFO    | [STEP 2] ✅ Live BTCUSDT price: $64,097.98
+09:47:49 | INFO    | 
+============================================================
+09:47:49 | INFO    |   STEP 3: RUNNING BACKTESTS ON REAL HISTORICAL DATA
+09:47:49 | INFO    | ============================================================
+09:47:49 | INFO    | 
+[BACKTEST] Running SMA Crossover on BTCUSDT (1h, 90 days)
+09:47:50 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:47:50] "GET /socket.io/?EIO=4&transport=polling&t=PzFPLiy HTTP/1.1" 200 -
+09:47:50 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:47:50] "POST /socket.io/?EIO=4&transport=polling&t=PzFPLn-&sid=GLMfWrBxlRLA16IJAAAA HTTP/1.1" 200 -
+09:47:51 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:47:51] "GET /socket.io/?EIO=4&transport=polling&t=PzFPLn_&sid=GLMfWrBxlRLA16IJAAAA HTTP/1.1" 200 -
+09:47:51 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:47:51] "POST /socket.io/?EIO=4&transport=polling&t=PzFPLt0&sid=GLMfWrBxlRLA16IJAAAA HTTP/1.1" 200 -
+09:47:51 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:47:51] "GET /socket.io/?EIO=4&transport=polling&t=PzFPLsy&sid=GLMfWrBxlRLA16IJAAAA HTTP/1.1" 200 -
+09:47:52 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:47:53 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:47:53 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+09:47:53 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+09:47:53 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+09:47:53 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:47:54 | INFO    | 
+============================================================
+  SMA Crossover — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         26 (9W / 17L)
+  Win Rate:       34.6%
+  Total Return:   +0.12%
+  Max Drawdown:   10.97%
+  Sharpe Ratio:   0.16
+  Profit Factor:  1.08
+  Avg Win:        $17.47
+  Avg Loss:       $8.57
+============================================================
+
+09:47:54 | INFO    | 
+============================================================
+  SMA Crossover — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         12 (3W / 9L)
+  Win Rate:       25.0%
+  Total Return:   -0.77%
+  Max Drawdown:   10.88%
+  Sharpe Ratio:   -0.91
+  Profit Factor:  0.52
+  Avg Win:        $27.16
+  Avg Loss:       $17.56
+============================================================
+
+09:47:54 | INFO    | [BACKTEST] ❌ SMA Crossover FAILED: too few trades (12 < 20), Sharpe too low (-0.91 < 0.5), negative return (-0.77%)
+09:47:54 | INFO    | 
+[BACKTEST] Running SMA Crossover on ETHUSDT (1h, 90 days)
+09:47:54 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:47:54 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:47:55 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+09:47:57 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+09:47:57 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+09:47:57 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:47:57 | INFO    | 
+============================================================
+  SMA Crossover — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         27 (6W / 21L)
+  Win Rate:       22.2%
+  Total Return:   -1.31%
+  Max Drawdown:   11.93%
+  Sharpe Ratio:   -1.36
+  Profit Factor:  0.51
+  Avg Win:        $22.81
+  Avg Loss:       $12.75
+============================================================
+
+09:47:57 | INFO    | 
+============================================================
+  SMA Crossover — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         12 (4W / 8L)
+  Win Rate:       33.3%
+  Total Return:   -0.52%
+  Max Drawdown:   11.16%
+  Sharpe Ratio:   -0.39
+  Profit Factor:  0.72
+  Avg Win:        $33.54
+  Avg Loss:       $23.29
+============================================================
+
+09:47:57 | INFO    | [BACKTEST] ❌ SMA Crossover FAILED: too few trades (12 < 20), Sharpe too low (-0.39 < 0.5), negative return (-0.52%)
+09:47:57 | INFO    | 
+[BACKTEST] Running RSI Mean Revert on BTCUSDT (1h, 90 days)
+09:47:59 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:48:01 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:48:01 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+09:48:01 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+09:48:01 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+09:48:02 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:48:02 | INFO    | 
+============================================================
+  RSI Mean Revert — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         7 (5W / 2L)
+  Win Rate:       71.4%
+  Total Return:   -0.62%
+  Max Drawdown:   12.28%
+  Sharpe Ratio:   -0.34
+  Profit Factor:  0.67
+  Avg Win:        $25.21
+  Avg Loss:       $94.00
+============================================================
+
+09:48:02 | INFO    | 
+============================================================
+  RSI Mean Revert — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         3 (2W / 1L)
+  Win Rate:       66.7%
+  Total Return:   +0.05%
+  Max Drawdown:   10.74%
+  Sharpe Ratio:   0.10
+  Profit Factor:  1.13
+  Avg Win:        $20.71
+  Avg Loss:       $36.76
+============================================================
+
+09:48:02 | INFO    | [BACKTEST] ❌ RSI Mean Revert FAILED: too few trades (3 < 20), Sharpe too low (0.10 < 0.5)
+09:48:02 | INFO    | 
+[BACKTEST] Running RSI Mean Revert on ETHUSDT (1h, 90 days)
+09:48:03 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:48:03 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:48:04 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+09:48:04 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+09:48:04 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+09:48:04 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:48:05 | INFO    | 
+============================================================
+  RSI Mean Revert — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         6 (4W / 2L)
+  Win Rate:       66.7%
+  Total Return:   -1.54%
+  Max Drawdown:   13.03%
+  Sharpe Ratio:   -0.77
+  Profit Factor:  0.40
+  Avg Win:        $25.63
+  Avg Loss:       $128.17
+============================================================
+
+09:48:05 | INFO    | 
+============================================================
+  RSI Mean Revert — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         3 (2W / 1L)
+  Win Rate:       66.7%
+  Total Return:   +1.11%
+  Max Drawdown:   10.99%
+  Sharpe Ratio:   1.10
+  Profit Factor:  3.70
+  Avg Win:        $75.96
+  Avg Loss:       $41.05
+============================================================
+
+09:48:05 | INFO    | [BACKTEST] ❌ RSI Mean Revert FAILED: too few trades (3 < 20)
+09:48:05 | INFO    | 
+[BACKTEST] Running Donchian Breakout on BTCUSDT (1h, 90 days)
+09:48:05 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:48:06 | INFO    | [HISTORY] Fetched 1000 candles for BTCUSDT (1h)
+09:48:07 | INFO    | [HISTORY] Fetched 160 candles for BTCUSDT (1h)
+09:48:08 | INFO    | [HISTORY] Fetched 0 candles for BTCUSDT (1h)
+09:48:08 | INFO    | [HISTORY] Total: 2160 candles for BTCUSDT
+09:48:08 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:48:08 | INFO    | 
+============================================================
+  Donchian Breakout — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         16 (5W / 11L)
+  Win Rate:       31.2%
+  Total Return:   -0.61%
+  Max Drawdown:   11.20%
+  Sharpe Ratio:   -0.76
+  Profit Factor:  0.64
+  Avg Win:        $22.10
+  Avg Loss:       $15.61
+============================================================
+
+09:48:08 | INFO    | 
+============================================================
+  Donchian Breakout — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         7 (3W / 4L)
+  Win Rate:       42.9%
+  Total Return:   -0.32%
+  Max Drawdown:   10.48%
+  Sharpe Ratio:   -0.45
+  Profit Factor:  0.67
+  Avg Win:        $21.10
+  Avg Loss:       $23.78
+============================================================
+
+09:48:08 | INFO    | [BACKTEST] ❌ Donchian Breakout FAILED: too few trades (7 < 20), Sharpe too low (-0.45 < 0.5), negative return (-0.32%)
+09:48:08 | INFO    | 
+[BACKTEST] Running Donchian Breakout on ETHUSDT (1h, 90 days)
+09:48:08 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:48:09 | INFO    | [HISTORY] Fetched 1000 candles for ETHUSDT (1h)
+09:48:09 | INFO    | [HISTORY] Fetched 160 candles for ETHUSDT (1h)
+09:48:12 | INFO    | [HISTORY] Fetched 0 candles for ETHUSDT (1h)
+09:48:12 | INFO    | [HISTORY] Total: 2160 candles for ETHUSDT
+09:48:12 | INFO    | [BACKTEST] Data: 2160 candles | Train: 1512 | Test: 648
+09:48:13 | INFO    | 
+============================================================
+  Donchian Breakout — Train (1512 candles) — ❌ FAILED
+============================================================
+  Trades:         15 (4W / 11L)
+  Win Rate:       26.7%
+  Total Return:   -1.25%
+  Max Drawdown:   11.62%
+  Sharpe Ratio:   -1.58
+  Profit Factor:  0.39
+  Avg Win:        $20.13
+  Avg Loss:       $18.72
+============================================================
+
+09:48:13 | INFO    | 
+============================================================
+  Donchian Breakout — Test (648 candles) — ❌ FAILED
+============================================================
+  Trades:         6 (2W / 4L)
+  Win Rate:       33.3%
+  Total Return:   +0.37%
+  Max Drawdown:   10.52%
+  Sharpe Ratio:   0.35
+  Profit Factor:  1.51
+  Avg Win:        $54.55
+  Avg Loss:       $18.02
+============================================================
+
+09:48:13 | INFO    | [BACKTEST] ❌ Donchian Breakout FAILED: too few trades (6 < 20), Sharpe too low (0.35 < 0.5)
+09:48:13 | WARNING | 
+[BACKTEST] ❌ NO strategies passed the backtest.
+  This is honest: none of the tested strategies showed an edge on recent unseen data.
+  The bot will still run and show you live prices, but it won't take trades until a strategy passes.
+
+09:48:13 | INFO    |   [NOTE] Activating all strategies in observation mode (small position sizes) so you can watch them work.
+09:48:13 | INFO    | 
+============================================================
+09:48:13 | INFO    |   STEP 4: STARTING LIVE PAPER TRADING
+09:48:13 | INFO    |   Streaming BTCUSDT via WebSocket...
+09:48:13 | INFO    |   Active strategies: ['SMA Crossover', 'RSI Mean Revert', 'Donchian Breakout']
+09:48:13 | INFO    | ============================================================
+
+09:48:13 | INFO    | [WS] Starting stream: BTCUSDT @ 1m
+09:48:13 | INFO    | [WS] Connecting to wss://stream.binance.com:9443/ws/btcusdt@kline_1m
+09:48:13 | INFO    | [WS] Connected — streaming BTCUSDT 1m
+09:48:23 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:48:23] "GET /socket.io/?EIO=4&transport=websocket&sid=GLMfWrBxlRLA16IJAAAA HTTP/1.1" 200 -
+09:48:39 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:48:39] "GET / HTTP/1.1" 200 -
+09:48:39 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:48:39] "GET /dashboard.js HTTP/1.1" 200 -
+09:48:40 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:48:40] "GET /socket.io/?EIO=4&transport=polling&t=PzFPXoX HTTP/1.1" 200 -
+09:48:40 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:48:40] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+09:48:40 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:48:40] "POST /socket.io/?EIO=4&transport=polling&t=PzFPXqF&sid=YmprGlISRDHoPaF0AAAC HTTP/1.1" 200 -
+09:48:40 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:48:40] "GET /socket.io/?EIO=4&transport=polling&t=PzFPXqJ&sid=YmprGlISRDHoPaF0AAAC HTTP/1.1" 200 -
+09:48:57 | INFO    | [KELLY] Not enough trades (0 < 10). Using minimum size.
+09:48:57 | WARNING | [KELLY] Kelly ≤ 0 (0.00%). Strategy has NO edge. Position size = 0.
+09:48:57 | INFO    | [ORDER] BUY 0.001560 BTCUSDT | Market: $64087.35 → Exec: $64119.92 | Slippage: 5.1 bps | Fee: $0.1001
+09:48:57 | INFO    | [WALLET] OPENED long 0.001560 BTCUSDT at $64119.92 | Fee: $0.1001 | Cash left: $9899.85
+09:48:57 | INFO    | [DASHBOARD] Timeframe change requested: 1m → 5m
+09:48:57 | INFO    | [BOT] Timeframe change: 1m → 5m
+09:48:57 | INFO    | [BOT] Strategies reset for 5m candles
+09:48:57 | INFO    | [WS] Stop requested
+09:49:06 | INFO    | [BOT] Reconnecting with 5m timeframe...
+09:49:07 | INFO    | [WS] Starting stream: BTCUSDT @ 5m
+09:49:07 | INFO    | [WS] Connecting to wss://stream.binance.com:9443/ws/btcusdt@kline_5m
+09:49:09 | INFO    | [WS] Connected — streaming BTCUSDT 5m
+09:49:21 | INFO    | [DASHBOARD] Timeframe change requested: 5m → 15m
+09:49:21 | INFO    | [BOT] Timeframe change: 5m → 15m
+09:49:21 | INFO    | [BOT] Strategies reset for 15m candles
+09:49:21 | INFO    | [WS] Stop requested
+09:49:30 | INFO    | [BOT] Reconnecting with 15m timeframe...
+09:49:31 | INFO    | [WS] Starting stream: BTCUSDT @ 15m
+09:49:31 | INFO    | [WS] Connecting to wss://stream.binance.com:9443/ws/btcusdt@kline_15m
+09:49:32 | INFO    | [WS] Connected — streaming BTCUSDT 15m
+09:49:36 | INFO    | [DASHBOARD] Timeframe change requested: 15m → 1m
+09:49:36 | INFO    | [BOT] Timeframe change: 15m → 1m
+09:49:36 | INFO    | [BOT] Strategies reset for 1m candles
+09:49:36 | INFO    | [WS] Stop requested
+09:49:46 | INFO    | [BOT] Reconnecting with 1m timeframe...
+09:49:47 | INFO    | [WS] Starting stream: BTCUSDT @ 1m
+09:49:47 | INFO    | [WS] Connecting to wss://stream.binance.com:9443/ws/btcusdt@kline_1m
+09:49:48 | INFO    | [WS] Connected — streaming BTCUSDT 1m
+09:50:27 | INFO    | [DASHBOARD] Timeframe change requested: 1m → 3m
+09:50:27 | INFO    | [BOT] Timeframe change: 1m → 3m
+09:50:27 | INFO    | [BOT] Strategies reset for 3m candles
+09:50:27 | INFO    | [WS] Stop requested
+09:50:34 | INFO    | [BOT] Reconnecting with 3m timeframe...
+09:50:35 | INFO    | [WS] Starting stream: BTCUSDT @ 3m
+09:50:35 | INFO    | [WS] Connecting to wss://stream.binance.com:9443/ws/btcusdt@kline_3m
+09:50:37 | INFO    | [WS] Connected — streaming BTCUSDT 3m
+09:51:18 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:18] "GET /socket.io/?EIO=4&transport=websocket&sid=YmprGlISRDHoPaF0AAAC HTTP/1.1" 200 -
+09:51:30 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:30] "GET / HTTP/1.1" 200 -
+09:51:30 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:30] "GET /dashboard.js HTTP/1.1" 200 -
+09:51:30 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:30] "GET /socket.io/?EIO=4&transport=polling&t=PzFQBQd HTTP/1.1" 200 -
+09:51:30 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:30] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+09:51:30 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:30] "POST /socket.io/?EIO=4&transport=polling&t=PzFQBSn&sid=qw2cgNNHhV3G8m22AAAE HTTP/1.1" 200 -
+09:51:30 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:30] "GET /socket.io/?EIO=4&transport=polling&t=PzFQBSp&sid=qw2cgNNHhV3G8m22AAAE HTTP/1.1" 200 -
+09:51:36 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:36] "GET / HTTP/1.1" 200 -
+09:51:36 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:36] "GET /socket.io/?EIO=4&transport=websocket&sid=qw2cgNNHhV3G8m22AAAE HTTP/1.1" 200 -
+09:51:36 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:36] "[36mGET /dashboard.js HTTP/1.1[0m" 304 -
+09:51:36 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:36] "GET /socket.io/?EIO=4&transport=polling&t=PzFQCx4 HTTP/1.1" 200 -
+09:51:37 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:37] "POST /socket.io/?EIO=4&transport=polling&t=PzFQD02&sid=xAzgw5muBJdP__sjAAAG HTTP/1.1" 200 -
+09:51:37 | INFO    | 127.0.0.1 - - [11/Jul/2026 09:51:37] "GET /socket.io/?EIO=4&transport=polling&t=PzFQD04&sid=xAzgw5muBJdP__sjAAAG HTTP/1.1" 200 -
+10:06:37 | INFO    | 127.0.0.1 - - [11/Jul/2026 10:06:37] "GET /socket.io/?EIO=4&transport=websocket&sid=xAzgw5muBJdP__sjAAAG HTTP/1.1" 200 -
