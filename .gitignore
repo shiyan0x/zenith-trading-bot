@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Runtime data (regenerated on each run)
+data/logs/bot.log
+data/logs/trades.csv
+data/logs/trades.json
+data/history/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Virtual environment
+venv/
+.venv/
+env/
