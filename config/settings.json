@@ -70,6 +70,14 @@
         "min_trades": 20,
         "note": "Walk-forward: train on 70%, test on 30%. Reject strategies with Sharpe < 0.5 or too few trades."
     },
+    "news": {
+        "enabled": true,
+        "fetch_interval_minutes": 5,
+        "block_on_bearish": true,
+        "bearish_threshold": -0.3,
+        "max_headlines": 20,
+        "note": "Free RSS feeds from CoinDesk, CoinTelegraph, Decrypt. No API keys needed."
+    },
     "dashboard": {
         "host": "127.0.0.1",
         "port": 5000

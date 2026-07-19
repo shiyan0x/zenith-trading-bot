@@ -152,6 +152,14 @@ def create_dashboard_app(bot_state: dict) -> tuple:
 
         return jsonify(lessons)
 
+    @app.route('/api/news')
+    def get_news():
+        """API endpoint — returns news headlines with sentiment scores."""
+        return jsonify({
+            'items': bot_state.get('news', []),
+            'sentiment': bot_state.get('sentiment', {}),
+        })
+
     @socketio.on('connect')
     def handle_connect():
         logger.debug("[DASHBOARD] Client connected")

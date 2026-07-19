@@ -38,6 +38,8 @@ from src.strategies.breakout import BreakoutStrategy
 from src.brain.backtester import Backtester
 from src.brain.kelly_sizer import KellySizer
 from src.brain.risk_manager import RiskManager
+from src.brain.sentiment import SentimentAnalyzer
+from src.core.news_feed import NewsFeed
 from src.dashboard.server import run_dashboard
 
 # ─── Ensure log directory exists before setting up logging ───
@@ -100,6 +102,10 @@ class TradingBot:
         self.kelly = KellySizer(config)
         self.risk_manager = RiskManager(config)
 
+        # ─── News & Sentiment ───
+        self.news_feed = NewsFeed(config)
+        self.sentiment = SentimentAnalyzer(config)
+
         # ─── Strategies ───
         strat_cfg = config.get('strategies', {})
         self.all_strategies = []
@@ -128,6 +134,8 @@ class TradingBot:
             'prices': {},
             'status': 'initializing',
             'timeframe': config.get('timeframe', '1m'),
+            'news': [],
+            'sentiment': {},
         }
 
         # ─── Timeframe switching ───
@@ -152,6 +160,8 @@ class TradingBot:
             'prices': prices,
             'status': 'running' if self.running else 'stopped',
             'timeframe': self.config.get('timeframe', '1m'),
+            'news': self.news_feed.get_news_dicts(),
+            'sentiment': self.sentiment.get_summary(),
         })
 
     def _handle_timeframe_change(self, new_tf: str):
@@ -290,6 +300,15 @@ class TradingBot:
             # Check for entry
             signal = strategy.should_enter()
             if signal == 'long' and not self.wallet.get_position_for_symbol(symbol):
+                # ─── News Sentiment Filter ───
+                if self.sentiment.should_block_trade():
+                    logger.info(
+                        f"[BOT] Entry BLOCKED by sentiment filter "
+                        f"({self.sentiment._overall_label}: "
+                        f"{self.sentiment._overall_score:+.3f})"
+                    )
+                    break
+
                 # Calculate position size using Kelly
                 kelly_pct = self.kelly.get_position_size_pct(
                     self.wallet.closed_trades
@@ -367,6 +386,16 @@ class TradingBot:
         logger.info(f"  Active strategies: {[s.name for s in self.active_strategies]}")
         logger.info("=" * 60 + "\n")
 
+        # ─── Step 3.5: Initial News Fetch ───
+        logger.info("[STEP 3.5] Fetching initial news...")
+        try:
+            news_items = await self.news_feed.fetch_news()
+            self.sentiment.analyze_news(news_items)
+            logger.info(f"[STEP 3.5] ✅ {len(news_items)} headlines loaded")
+        except Exception as e:
+            logger.warning(f"[STEP 3.5] News fetch failed (non-fatal): {e}")
+        self._update_dashboard_state()
+
         # Push updates to dashboard periodically
         async def push_dashboard_updates():
             while self.running:
@@ -376,8 +405,20 @@ class TradingBot:
                     pass
                 await asyncio.sleep(3)
 
-        # Run WebSocket stream and dashboard updates concurrently
+        # Fetch news periodically in the background
+        async def fetch_news_periodically():
+            while self.running:
+                await asyncio.sleep(self.news_feed.fetch_interval)
+                try:
+                    news_items = await self.news_feed.fetch_news()
+                    self.sentiment.analyze_news(news_items)
+                    self._update_dashboard_state()
+                except Exception as e:
+                    logger.warning(f"[NEWS] Background fetch error: {e}")
+
+        # Run WebSocket stream, dashboard updates, and news concurrently
         update_task = asyncio.create_task(push_dashboard_updates())
+        news_task = asyncio.create_task(fetch_news_periodically())
 
         try:
             # Main stream loop — restarts when timeframe changes
@@ -409,6 +450,7 @@ class TradingBot:
         finally:
             self.running = False
             update_task.cancel()
+            news_task.cancel()
             self._print_final_report()
 
     def _print_final_report(self):

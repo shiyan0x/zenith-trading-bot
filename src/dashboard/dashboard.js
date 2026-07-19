@@ -643,6 +643,92 @@ function renderWorld(state) {
     } else {
         breakerAlert.classList.remove('active');
     }
+
+    // ─── News Feed ───
+    renderNewsFeed(state);
+}
+
+function renderNewsFeed(state) {
+    const news = state.news || [];
+    const sentiment = state.sentiment || {};
+
+    // Sentiment meter
+    const sentLabel = document.getElementById('news-sentiment-label');
+    const sentFill = document.getElementById('news-sentiment-fill');
+    const label = sentiment.overall_label || 'neutral';
+    const score = sentiment.overall_score || 0;
+
+    sentLabel.textContent = label.toUpperCase();
+    sentLabel.className = 'sentiment-label ' + label;
+
+    // Bar: score goes from -1 to +1, center is 50%
+    // Bullish: fill goes right from center, green
+    // Bearish: fill goes left from center, red
+    const barWidth = Math.abs(score) * 50; // max 50% each side
+    if (score >= 0) {
+        sentFill.style.left = '50%';
+        sentFill.style.width = barWidth + '%';
+        sentFill.style.background = score > 0.2
+            ? 'linear-gradient(90deg, var(--green), #4ade80)'
+            : 'var(--amber)';
+    } else {
+        sentFill.style.left = (50 - barWidth) + '%';
+        sentFill.style.width = barWidth + '%';
+        sentFill.style.background = score < -0.2
+            ? 'linear-gradient(90deg, #f87171, var(--red))'
+            : 'var(--amber)';
+    }
+
+    // Blocking alert
+    const blockAlert = document.getElementById('news-blocking-alert');
+    if (sentiment.is_blocking) {
+        blockAlert.classList.add('active');
+    } else {
+        blockAlert.classList.remove('active');
+    }
+
+    // News list
+    const container = document.getElementById('news-list-container');
+    if (news.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="emoji">📰</div><div class="empty-text">Fetching news...</div></div>';
+        return;
+    }
+
+    let html = '';
+    news.forEach(item => {
+        const age = item.age_minutes || 0;
+        let ageText;
+        if (age < 1) ageText = 'just now';
+        else if (age < 60) ageText = Math.round(age) + 'm ago';
+        else if (age < 1440) ageText = Math.round(age / 60) + 'h ago';
+        else ageText = Math.round(age / 1440) + 'd ago';
+
+        const sentClass = item.sentiment_label || 'neutral';
+        const titleHtml = item.url
+            ? `<a href="${item.url}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>`
+            : escapeHtml(item.title);
+
+        html += `<div class="news-item">
+            <div class="news-dot ${sentClass}"></div>
+            <div class="news-content">
+                <div class="news-title">${titleHtml}</div>
+                <div class="news-meta">
+                    <span class="news-source">${escapeHtml(item.source || '')}</span>
+                    <span>·</span>
+                    <span>${ageText}</span>
+                    <span>·</span>
+                    <span style="color: var(--${sentClass === 'bullish' ? 'green' : sentClass === 'bearish' ? 'red' : 'amber'})">${(item.sentiment_score >= 0 ? '+' : '') + (item.sentiment_score || 0).toFixed(2)}</span>
+                </div>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 // ─── LESSONS ───
