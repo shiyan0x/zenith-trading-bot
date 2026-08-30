@@ -2,48 +2,41 @@
 
 ### Real prices. Fake money. It never lies.
 
-An AI-powered **paper trading bot** that trades crypto using real live market data from Binance — but with fake money so nothing is at risk. Every trade, every fee, every loss is tracked honestly. Built to help you learn how automated trading works, not to make you rich.
+A rule-based **paper trading bot** that trades crypto using real live market data from Binance — but with fake money so nothing is at risk. Every trade, every fee, every loss is tracked honestly. Built to help you learn how automated trading works, not to make you rich.
 
 ---
 
 ## 🎯 What This Bot Can Do
 
 ### 1. 📡 Live Market Data (No API Key Needed)
-- Pulls **real-time crypto prices** from Binance via WebSocket (BTC, ETH)
+- Pulls **real-time crypto prices** from Binance via one WebSocket stream per configured symbol
 - Fetches **historical candlestick data** (OHLCV) via Binance REST API
-- Streams live 1-minute candles with open, high, low, close, and volume
+- Streams the configured candle interval (15 minutes by default) with open, high, low, close, and volume
 - Auto-reconnects if the WebSocket connection drops
 - **Zero API keys required** — uses free public Binance endpoints
 
-### 2. 🧠 Three Trading Strategies
-The bot comes with 3 built-in technical analysis strategies:
+### 2. 🧠 Two Trading Strategies
 
-#### SMA Crossover (Simple Moving Average)
-- Tracks a **short-term average** (10 candles) and a **long-term average** (30 candles)
-- **Buys** when the short SMA crosses above the long SMA (uptrend signal)
-- **Sells** when the short SMA crosses below the long SMA (downtrend signal)
-- Works best in trending markets, gets chopped up in sideways markets
+#### EMA + VWAP + RSI trend
 
-#### RSI Mean Reversion (Relative Strength Index)
-- Calculates RSI (0–100 scale) using Wilder smoothing method over 14 candles
-- **Buys** when RSI drops below 30 (oversold — price dropped too much, might bounce)
-- **Sells** when RSI rises above 70 (overbought — price rose too much, might pull back)
-- Works when markets bounce, but in a real crash "oversold" can get more oversold
+- Long signal: EMA 9 > EMA 21, price > session VWAP, and RSI is 50–70.
+- A 2×ATR stop and 2:1 target are stored with the position.
 
-#### Donchian Channel Breakout
-- Looks at the highest high and lowest low of the last 20 candles (the "channel")
-- **Buys** when price breaks above the channel (new momentum signal)
-- **Sells** when price breaks below the channel low
-- Many false signals in choppy markets — relies on a few big wins to cover many small losses
+#### RSI + Bollinger Bands mean reversion
+
+- Long signal: ranging regime (ADX < 25), lower Bollinger Band, oversold RSI, and optional candle confirmation.
+- Exits at the middle band, ATR stop, time stop, or regime change.
+
+Both strategies can create short signals in research. The live bot is **spot by default**, so it executes long signals only. Enabling live shorts requires both futures fee mode and `trading.allow_short: true`.
 
 ### 3. 📊 Walk-Forward Backtesting
 Before the bot trades live, it tests every strategy on **real historical data**:
 
-- Downloads 90 days of real hourly candles from Binance
+- Downloads 90 days of real candles using the **same interval as live trading**
 - Splits data: **70% for training**, **30% for testing** (unseen data)
 - Runs each strategy on training data first to check if it works at all
 - Then runs on the **unseen test data** — this is the honest score
-- Applies full fees + slippage during backtesting (no cheating)
+- Applies fees, volatility-aware slippage, stop-distance sizing, and deterministic fills during backtesting
 - **Only activates strategies that pass** on the test set
 - If NO strategy passes, it says so honestly — never forces a pick
 - Measures: win rate, total return, Sharpe ratio, max drawdown, profit factor
@@ -55,15 +48,15 @@ Before the bot trades live, it tests every strategy on **real historical data**:
 - Records every trade with entry price, exit price, net PnL, and fees
 - Balance can go to zero — the bot doesn't prevent it, it shows it
 - Losing trades close at the **real market price**, never rounded up
+- Supports conservative 1× collateral accounting for optional paper-futures shorts
 
 ### 5. 💸 Realistic Fee & Slippage Model
 Every single trade pays real costs — nothing is free:
 
-- **Trading fees**: 0.1% maker/taker for spot (Binance VIP 0 rates, verified July 2026)
+- **Trading fees**: configurable maker/taker rates; market orders use the taker rate
 - **Slippage simulation**: 5 basis points base, scaled up to 30 bps in volatile conditions
 - **Volatility-adjusted slippage**: multiplied by market volatility so fast-moving markets have higher costs
-- **Funding fees**: Available for futures mode (disabled by default, spot trading)
-- All fee rates sourced from official Binance fee schedule
+- Backtests disable random fill jitter so results are reproducible
 
 ### 6. 📐 Kelly Criterion Position Sizing
 The bot uses math to decide **how much to bet on each trade**:
@@ -73,10 +66,10 @@ The bot uses math to decide **how much to bet on each trade**:
   - R = risk-reward ratio (avg win / avg loss)
 - Uses **Half-Kelly** (0.5 × f*) — standard practice among pro traders
   - Keeps ~75% of growth rate with much less drawdown
-- Recalculates every 20 trades based on recent performance
+- Calculates separately for each strategy/symbol pair
+- Uses the configured 1% bootstrap risk only until it has 10 completed trades
 - If Kelly ≤ 0 (no edge), position size = 0 → **stops trading automatically**
-- Requires minimum 10 trades before calculating (uses 1% until then)
-- Never risks more than 2% of equity per trade (hard cap)
+- Sizes from actual entry-to-stop distance; the configured 2% limit is a maximum loss-at-stop, not merely a notional cap
 
 ### 7. 🛡️ Risk Management & Circuit Breaker
 The safety net that prevents the bot from losing everything:
@@ -88,7 +81,7 @@ The safety net that prevents the bot from losing everything:
   2. Closes all open positions at market price
   3. Logs what happened and why
   4. Waits for a 60-minute cooldown period
-  5. Only resumes when conditions improve
+  5. Re-runs out-of-sample validation after cooldown and resumes only if a strategy passes
 - Tracks full history of all circuit breaker triggers
 
 ### 8. 📋 Trade Logging
@@ -110,7 +103,7 @@ A premium sidebar-based web dashboard at `http://localhost:5000` with **8 views*
 | **📈 Evolution** | Bot's generation counter, best Sharpe ratio, total return, best strategy, full equity history chart, win/loss donut chart |
 | **🧠 Strategies** | Backtest scoreboard — each strategy's pass/fail status, trade count, win rate, return, Sharpe ratio, max drawdown |
 | **🌍 World** | Live market prices for all tracked symbols, risk panel with drawdown meter, Kelly fraction, position sizing, total fees, circuit breaker status |
-| **📚 Lessons** | AI-derived insights — net PnL summary, biggest win/loss analysis, fee impact, win rate commentary, honesty reminders |
+| **📚 Lessons** | Derived insights — net PnL summary, biggest win/loss analysis, fee impact, win rate commentary, honesty reminders |
 | **💱 Trades** | Complete trade history log with numbered entries — symbol, side, entry, exit, net PnL, fees, balance after |
 
 **Dashboard features:**
@@ -124,17 +117,17 @@ A premium sidebar-based web dashboard at `http://localhost:5000` with **8 views*
 The bot's main loop runs continuously:
 
 1. **Start dashboard** on localhost:5000
-2. **Fetch live price** to verify Binance connection
-3. **Run backtests** on all strategies with real historical data
+2. **Fetch live prices for every configured symbol** to verify Binance connection
+3. **Run same-timeframe backtests** on all strategy/symbol pairs with real historical data
 4. **Filter strategies** — only keep ones that pass on unseen test data
-5. **Stream live candles** via Binance WebSocket
+5. **Stream live candles for every configured symbol** via Binance WebSocket
 6. **On each closed candle**:
    - Check risk manager → stop if circuit breaker active
    - Check drawdown → close everything if limit exceeded
    - Feed candle to all active strategies
-   - Check exit signals first (if holding a position)
+   - Let only the owning strategy check a position's exit
    - Check entry signals (if no position)
-   - Calculate position size via Kelly criterion
+   - Calculate position size from Kelly and the stop distance
    - Execute trade through order engine (with fees + slippage)
    - Update dashboard state
 7. **Push updates** to the dashboard every 3 seconds
@@ -159,9 +152,9 @@ src/
   
   strategies/
     base_strategy.py         — Abstract base class all strategies implement
-    sma_crossover.py         — SMA Crossover strategy (short vs long moving average)
-    rsi_mean_revert.py       — RSI Mean Reversion strategy (oversold/overbought)
-    breakout.py              — Donchian Channel Breakout strategy (channel high/low)
+    ema_vwap_rsi.py          — EMA + VWAP + RSI trend strategy
+    mean_reversion.py        — RSI + Bollinger Bands mean-reversion strategy
+    research/                — standalone strategy research tools
   
   brain/
     backtester.py            — Walk-forward backtester on real historical data
@@ -175,7 +168,7 @@ src/
 
 data/
   logs/                      — Trade logs and bot.log
-  history/                   — Cached historical candle data
+tests/                       — regression tests for accounting, risk, and backtesting
 ```
 
 ---
@@ -184,13 +177,19 @@ data/
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 # Run the bot
 python src/main.py
 ```
 
 Then open **http://localhost:5000** in your browser to see the dashboard.
+
+Run the offline regression suite with:
+
+```bash
+python -m unittest discover -s tests -v
+```
 
 ---
 
@@ -202,11 +201,12 @@ All settings are in `config/settings.json`:
 |---------|---------|-------------|
 | `starting_balance` | $10,000 | Fake money to start with |
 | `symbols` | BTCUSDT, ETHUSDT | Crypto pairs to trade |
-| `timeframe` | 1m | Candle interval for live trading |
+| `timeframe` | 15m | Candle interval for both live trading and validation |
 | `spot_maker/taker` | 0.1% | Trading fee rates |
 | `base_bps` | 5 | Base slippage in basis points |
 | `max_drawdown_pct` | 15% | Circuit breaker threshold |
 | `max_risk_per_trade_pct` | 2% | Max risk per single trade |
+| `max_notional_pct` | 100% | Maximum 1× notional exposure |
 | `kelly_fraction` | 0.5 | Half-Kelly for position sizing |
 | `history_days` | 90 | Days of historical data for backtesting |
 | `train_ratio` | 70% | Backtest train/test split |
@@ -230,7 +230,7 @@ flask-socketio   — real-time WebSocket updates to the browser
 
 **This is a simulation, not a money machine.**
 
-- The strategies (SMA crossover, RSI mean-reversion, Donchian breakout) are **textbook indicators** with no proven long-term edge in efficient markets
+- The EMA/VWAP/RSI and RSI/Bollinger strategies are **textbook indicator combinations** with no proven long-term edge in efficient markets
 - The backtester may find periods where they work, but **past performance does not predict future results**
 - Real trading has more slippage, emotional pressure, exchange outages, and real financial risk
 - This bot is built to **show you the truth** about automated trading — including when it loses

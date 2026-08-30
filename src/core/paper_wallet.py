@@ -27,13 +27,22 @@ class Position:
     """
 
     def __init__(self, symbol: str, side: str, quantity: float,
-                 entry_price: float, fee_paid: float, timestamp: float):
+                 entry_price: float, fee_paid: float, timestamp: float,
+                 strategy_name: str = '', stop_loss: float | None = None,
+                 take_profit: float | None = None, collateral: float = 0.0):
         self.symbol = symbol
         self.side = side              # 'long' or 'short'
         self.quantity = quantity       # how much you hold
         self.entry_price = entry_price  # real price you got in at (after slippage)
         self.fee_paid = fee_paid      # total fees paid so far on this position
         self.timestamp = timestamp    # when you entered
+        self.strategy_name = strategy_name
+        self.stop_loss = stop_loss
+        self.take_profit = take_profit
+        # A 1x paper-futures short reserves collateral equal to the entry
+        # notional.  Keeping it separate from available cash makes both cash
+        # and equity correct without pretending borrowed assets are owned.
+        self.collateral = collateral
         self.id = f"{symbol}_{side}_{int(timestamp * 1000)}"
 
     def unrealized_pnl(self, current_price: float) -> float:
@@ -62,6 +71,10 @@ class Position:
             'quantity': self.quantity,
             'entry_price': self.entry_price,
             'fee_paid': self.fee_paid,
+            'strategy_name': self.strategy_name,
+            'stop_loss': self.stop_loss,
+            'take_profit': self.take_profit,
+            'collateral': self.collateral,
             'timestamp': self.timestamp,
             'entry_time': datetime.fromtimestamp(
                 self.timestamp, tz=timezone.utc
@@ -112,7 +125,7 @@ class PaperWallet:
         winning or losing.
         """
         return self.cash + sum(
-            p.quantity * p.entry_price  # use entry price as base
+            p.quantity * p.entry_price if p.side == 'long' else p.collateral
             for p in self.positions.values()
         )
 
@@ -125,21 +138,10 @@ class PaperWallet:
         total = self.cash
         for pos in self.positions.values():
             price = prices.get(pos.symbol, pos.entry_price)
-            total += pos.quantity * price  # current market value
-            total += pos.unrealized_pnl(price)  # add/subtract the PnL
-            # Wait — that double counts. Let me fix:
-            # For a long: value = quantity * current_price
-            # The PnL is already (current - entry) * qty
-            # So total = cash + sum(qty * current_price)
-        # Recalculate correctly:
-        total = self.cash
-        for pos in self.positions.values():
-            price = prices.get(pos.symbol, pos.entry_price)
             if pos.side == 'long':
                 total += pos.quantity * price
             else:
-                # For short: we sold at entry_price, current exposure = entry - current
-                total += pos.quantity * (2 * pos.entry_price - price)
+                total += pos.collateral + pos.unrealized_pnl(price)
         return total
 
     def get_drawdown(self, prices: dict[str, float]) -> float:
@@ -159,24 +161,42 @@ class PaperWallet:
         return self.cash >= amount
 
     def open_position(self, symbol: str, side: str, quantity: float,
-                      execution_price: float, fee: float) -> Optional[Position]:
+                      execution_price: float, fee: float,
+                      strategy_name: str = '', stop_loss: float | None = None,
+                      take_profit: float | None = None) -> Optional[Position]:
         """
-        Open a new position. Deducts cost + fee from cash.
+        Open a new position.
+
+        Longs debit notional plus fees. A short uses a conservative 1x margin
+        model: entry notional is reserved as collateral and released with its
+        realized PnL when the short is covered.
 
         Returns the Position if successful, None if we can't afford it.
         """
         cost = execution_price * quantity
-        total_cost = cost + fee
+        if side not in {'long', 'short'}:
+            raise ValueError(f"Unsupported position side: {side}")
 
-        if not self.can_afford(total_cost):
+        # Require sufficient capital to reserve a full 1x short or buy a
+        # long.  This prevents implicit leverage in the paper account.
+        required_cash = cost + fee
+
+        if not self.can_afford(required_cash):
             logger.warning(
                 f"[WALLET] Cannot afford {side} {quantity} {symbol} "
-                f"at ${execution_price:.2f} (need ${total_cost:.2f}, "
+                f"at ${execution_price:.2f} (need ${required_cash:.2f}, "
                 f"have ${self.cash:.2f})"
             )
             return None
 
-        self.cash -= total_cost
+        collateral = 0.0
+        if side == 'long':
+            self.cash -= required_cash
+        else:
+            # Reserve collateral so open shorts cannot create implicit
+            # leverage or be reused as buying power.
+            collateral = cost
+            self.cash -= required_cash
         self.total_fees_paid += fee
 
         pos = Position(
@@ -185,7 +205,11 @@ class PaperWallet:
             quantity=quantity,
             entry_price=execution_price,
             fee_paid=fee,
-            timestamp=time.time()
+            timestamp=time.time(),
+            strategy_name=strategy_name,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            collateral=collateral,
         )
         self.positions[pos.id] = pos
 
@@ -211,12 +235,15 @@ class PaperWallet:
             logger.warning(f"[WALLET] Position {position_id} not found")
             return None
 
-        # Calculate revenue from closing
-        revenue = execution_price * pos.quantity
-        revenue_after_fee = revenue - fee
-
-        # Add revenue back to cash
-        self.cash += revenue_after_fee
+        notional = execution_price * pos.quantity
+        if pos.side == 'long':
+            # Sell the owned asset and receive the proceeds less fees.
+            self.cash += notional - fee
+        else:
+            # Release collateral and settle the short's realized PnL.
+            self.cash += pos.collateral + (
+                pos.entry_price - execution_price
+            ) * pos.quantity - fee
 
         # Calculate real PnL
         if pos.side == 'long':
@@ -239,6 +266,7 @@ class PaperWallet:
             'id': pos.id,
             'symbol': pos.symbol,
             'side': pos.side,
+            'strategy_name': pos.strategy_name,
             'quantity': pos.quantity,
             'entry_price': pos.entry_price,
             'exit_price': execution_price,
@@ -274,7 +302,7 @@ class PaperWallet:
                     return pos
         return None
 
-    def get_stats(self) -> dict:
+    def get_stats(self, prices: Optional[dict[str, float]] = None) -> dict:
         """Get wallet performance stats — honest numbers only."""
         win_rate = 0.0
         if self.total_trades > 0:
@@ -289,9 +317,11 @@ class PaperWallet:
         if losses:
             avg_loss = abs(sum(losses) / len(losses))
 
+        current_equity = self.total_equity(prices or {})
         return {
             'starting_balance': self.starting_balance,
             'current_cash': self.cash,
+            'current_equity': current_equity,
             'total_trades': self.total_trades,
             'winning_trades': self.winning_trades,
             'losing_trades': self.losing_trades,
@@ -299,7 +329,7 @@ class PaperWallet:
             'avg_win': avg_win,
             'avg_loss': avg_loss,
             'total_fees_paid': self.total_fees_paid,
-            'net_return_pct': ((self.cash - self.starting_balance)
+            'net_return_pct': ((current_equity - self.starting_balance)
                                / self.starting_balance) * 100,
         }
 
@@ -314,5 +344,5 @@ class PaperWallet:
                 for p in self.positions.values()
             ],
             'drawdown_pct': self.get_drawdown(prices),
-            'stats': self.get_stats(),
+            'stats': self.get_stats(prices),
         }

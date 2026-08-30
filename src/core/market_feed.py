@@ -14,8 +14,15 @@ import logging
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
-import aiohttp
-import websockets
+try:
+    import aiohttp
+    import websockets
+except ImportError as exc:  # lets offline analysis/backtests import Candle
+    aiohttp = None
+    websockets = None
+    _DEPENDENCY_ERROR = exc
+else:
+    _DEPENDENCY_ERROR = None
 
 logger = logging.getLogger(__name__)
 
@@ -61,11 +68,20 @@ class MarketFeed:
         self._running = False
         self._ws = None
 
+    @staticmethod
+    def _require_network_dependencies():
+        if _DEPENDENCY_ERROR is not None:
+            raise RuntimeError(
+                "Missing market-feed dependencies. Install requirements.txt "
+                "before requesting live Binance data."
+            ) from _DEPENDENCY_ERROR
+
     async def get_current_price(self, symbol: str) -> float:
         """
         Fetch the current price via REST.
         Returns the real last traded price from Binance.
         """
+        self._require_network_dependencies()
         url = f"{self.rest_url}/api/v3/ticker/price"
         params = {'symbol': symbol.upper()}
 
@@ -98,6 +114,7 @@ class MarketFeed:
         Returns:
             List of Candle objects with real historical prices.
         """
+        self._require_network_dependencies()
         url = f"{self.rest_url}{self.klines_endpoint}"
         params = {
             'symbol': symbol.upper(),
@@ -176,6 +193,7 @@ class MarketFeed:
         This is the live heartbeat of the bot.
         Every price is real, straight from Binance.
         """
+        self._require_network_dependencies()
         stream = f"{symbol.lower()}@kline_{interval}"
         url = f"{self.ws_url}/{stream}"
 

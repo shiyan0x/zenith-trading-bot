@@ -19,7 +19,8 @@ import os
 import json
 import logging
 import threading
-from flask import Flask, render_template_string, jsonify, send_from_directory
+import secrets
+from flask import Flask, jsonify, send_from_directory
 from flask_socketio import SocketIO
 
 logger = logging.getLogger(__name__)
@@ -42,9 +43,13 @@ def create_dashboard_app(bot_state: dict) -> tuple:
     app = Flask(__name__,
                 template_folder=dashboard_dir,
                 static_folder=dashboard_dir)
-    app.config['SECRET_KEY'] = 'honest-bot-dashboard'
+    app.config['SECRET_KEY'] = os.environ.get(
+        'ZENITH_DASHBOARD_SECRET', secrets.token_urlsafe(32)
+    )
 
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+    # The dashboard is local-only by default; retain Socket.IO's same-origin
+    # policy instead of accepting browser clients from every origin.
+    socketio = SocketIO(app, async_mode='threading')
 
     # Callback for timeframe changes — set by main.py
     app._on_timeframe_change = None

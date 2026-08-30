@@ -38,7 +38,11 @@ class OrderEngine:
 
     def market_buy(self, symbol: str, quantity: float,
                    current_price: float,
-                   volatility: float = 0.0) -> Optional[Position]:
+                   volatility: float = 0.0,
+                   order_size_ratio: float = 0.01,
+                   strategy_name: str = '',
+                   stop_loss: float | None = None,
+                   take_profit: float | None = None) -> Optional[Position]:
         """
         Execute a market buy order.
 
@@ -55,7 +59,8 @@ class OrderEngine:
             price=current_price,
             quantity=quantity,
             side='buy',
-            volatility=volatility
+            volatility=volatility,
+            order_size_ratio=order_size_ratio,
         )
 
         logger.info(
@@ -71,16 +76,51 @@ class OrderEngine:
             side='long',
             quantity=quantity,
             execution_price=costs['execution_price'],
-            fee=costs['fee']
+            fee=costs['fee'],
+            strategy_name=strategy_name,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
         )
 
         return position
 
-    def market_sell(self, symbol: str, position_id: str,
+    def market_short(self, symbol: str, quantity: float,
+                     current_price: float,
+                     volatility: float = 0.0,
+                     order_size_ratio: float = 0.01,
+                     strategy_name: str = '',
+                     stop_loss: float | None = None,
+                     take_profit: float | None = None) -> Optional[Position]:
+        """Open a 1x paper-futures short position."""
+        costs = self.fee_model.total_cost(
+            price=current_price,
+            quantity=quantity,
+            side='sell',
+            volatility=volatility,
+            order_size_ratio=order_size_ratio,
+        )
+        logger.info(
+            f"[ORDER] SHORT {quantity:.6f} {symbol} | "
+            f"Market: ${current_price:.2f} → Exec: ${costs['execution_price']:.2f} | "
+            f"Slippage: {costs['slippage_bps']:.1f} bps | Fee: ${costs['fee']:.4f}"
+        )
+        return self.wallet.open_position(
+            symbol=symbol,
+            side='short',
+            quantity=quantity,
+            execution_price=costs['execution_price'],
+            fee=costs['fee'],
+            strategy_name=strategy_name,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+        )
+
+    def close_position(self, symbol: str, position_id: str,
                     current_price: float,
-                    volatility: float = 0.0) -> Optional[dict]:
+                    volatility: float = 0.0,
+                    order_size_ratio: float = 0.01) -> Optional[dict]:
         """
-        Close a position with a market sell.
+        Close a position with the correct market side.
 
         Honesty rule: the exit price is the real market price
         minus slippage minus fees. If it's a loss, it's a loss.
@@ -94,15 +134,18 @@ class OrderEngine:
             return None
 
         # Step 1: Calculate real exit costs
+        exit_side = 'sell' if pos.side == 'long' else 'buy'
         costs = self.fee_model.total_cost(
             price=current_price,
             quantity=pos.quantity,
-            side='sell',
-            volatility=volatility
+            side=exit_side,
+            volatility=volatility,
+            order_size_ratio=order_size_ratio,
         )
 
         logger.info(
-            f"[ORDER] SELL {pos.quantity:.6f} {pos.symbol} | "
+            f"[ORDER] {'SELL' if pos.side == 'long' else 'COVER'} "
+            f"{pos.quantity:.6f} {pos.symbol} | "
             f"Market: ${current_price:.2f} → Exec: ${costs['execution_price']:.2f} | "
             f"Slippage: {costs['slippage_bps']:.1f} bps | "
             f"Fee: ${costs['fee']:.4f}"
@@ -121,6 +164,14 @@ class OrderEngine:
 
         return trade
 
+    # Backward-compatible name for callers that close a long position.
+    def market_sell(self, symbol: str, position_id: str,
+                    current_price: float, volatility: float = 0.0,
+                    order_size_ratio: float = 0.01) -> Optional[dict]:
+        return self.close_position(
+            symbol, position_id, current_price, volatility, order_size_ratio
+        )
+
     def close_all(self, prices: dict[str, float],
                   volatility: float = 0.0) -> list[dict]:
         """
@@ -135,7 +186,7 @@ class OrderEngine:
             if pos:
                 price = prices.get(pos.symbol, 0)
                 if price > 0:
-                    trade = self.market_sell(pos.symbol, pid, price, volatility)
+                    trade = self.close_position(pos.symbol, pid, price, volatility)
                     if trade:
                         trades.append(trade)
 

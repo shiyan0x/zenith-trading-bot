@@ -29,13 +29,15 @@ logger = logging.getLogger(__name__)
 class BacktestResult:
     """Results of a backtest run — all numbers honest, no rounding to look good."""
 
-    def __init__(self, strategy_name: str, period: str):
+    def __init__(self, strategy_name: str, period: str,
+                 periods_per_year: int = 1):
         self.strategy_name = strategy_name
         self.period = period
         self.trades: list[dict] = []
         self.starting_balance = 10000.0
         self.ending_balance = 10000.0
         self.equity_curve: list[float] = []
+        self.periods_per_year = periods_per_year
 
     @property
     def total_trades(self) -> int:
@@ -97,24 +99,26 @@ class BacktestResult:
     @property
     def sharpe_ratio(self) -> float:
         """
-        Annualized Sharpe ratio (simplified, assuming 1-minute candles).
-        Sharpe = mean(returns) / std(returns) * sqrt(annualization_factor)
+        Annualized Sharpe ratio from per-candle equity returns.
 
         A Sharpe > 1 is decent. > 2 is very good. < 0.5 is poor.
         """
-        if len(self.trades) < 2:
+        if len(self.equity_curve) < 3:
             return 0.0
 
-        returns = [t['net_pnl_pct'] / 100 for t in self.trades]
         import numpy as np
+        equity = np.asarray(self.equity_curve, dtype=float)
+        prior = equity[:-1]
+        returns = np.diff(equity) / np.where(prior == 0, np.nan, prior)
+        returns = returns[np.isfinite(returns)]
+        if len(returns) < 2:
+            return 0.0
         mean_ret = np.mean(returns)
-        std_ret = np.std(returns)
+        std_ret = np.std(returns, ddof=1)
         if std_ret == 0:
             return 0.0
 
-        # Rough annualization: assume ~252 trading days, ~1440 minutes/day
-        # But trades happen irregularly, so we use sqrt(num_trades * 365/days_in_data)
-        sharpe = mean_ret / std_ret * (len(returns) ** 0.5)
+        sharpe = mean_ret / std_ret * (self.periods_per_year ** 0.5)
         return float(sharpe)
 
     def passed(self, min_sharpe: float = 0.5, min_trades: int = 20) -> bool:
@@ -123,9 +127,9 @@ class BacktestResult:
                 and self.sharpe_ratio >= min_sharpe
                 and self.total_return_pct > 0)
 
-    def summary(self) -> str:
+    def summary(self, min_sharpe: float = 0.5, min_trades: int = 20) -> str:
         """Human-readable summary — honest, no sugar coating."""
-        status = "✅ PASSED" if self.passed() else "❌ FAILED"
+        status = "✅ PASSED" if self.passed(min_sharpe, min_trades) else "❌ FAILED"
         return (
             f"\n{'='*60}\n"
             f"  {self.strategy_name} — {self.period} — {status}\n"
@@ -142,7 +146,7 @@ class BacktestResult:
             f"{'='*60}\n"
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self, min_sharpe: float = 0.5, min_trades: int = 20) -> dict:
         return {
             'strategy': self.strategy_name,
             'period': self.period,
@@ -154,7 +158,7 @@ class BacktestResult:
             'profit_factor': self.profit_factor,
             'avg_win': self.avg_win,
             'avg_loss': self.avg_loss,
-            'passed': self.passed(),
+            'passed': self.passed(min_sharpe, min_trades),
         }
 
 
@@ -179,118 +183,59 @@ class Backtester:
         self.min_trades = self.bt_config.get('min_trades', 20)
 
     def _run_on_candles(self, strategy: BaseStrategy, candles: list[Candle],
-                        starting_balance: float, label: str) -> BacktestResult:
+                        starting_balance: float, label: str,
+                        periods_per_year: int = 1) -> BacktestResult:
         """
         Run a strategy over a series of candles, simulating trades.
 
         This is the core simulation loop — handles entries, exits,
         fees, slippage, and PnL tracking.
         """
-        result = BacktestResult(strategy.name, label)
+        result = BacktestResult(strategy.name, label, periods_per_year)
         result.starting_balance = starting_balance
 
-        balance = starting_balance
-        position = None  # current open position (or None)
-        trade_size_pct = 0.10  # risk 10% of balance per trade
+        cash = starting_balance
+        position = None
+        risk_pct = self.bt_config.get(
+            'risk_per_trade_pct',
+            self.config.get('kelly', {}).get('bootstrap_risk_pct', 1.0),
+        )
+        max_notional_pct = self.config.get('risk', {}).get('max_notional_pct', 100)
+        allow_short = (
+            self.config.get('trading', {}).get('allow_short', False)
+            and self.fee_model.mode == 'futures'
+        )
 
-        strategy.reset()
+        def equity(mark_price: float) -> float:
+            if position is None:
+                return cash
+            if position['side'] == 'long':
+                return cash + position['qty'] * mark_price
+            return cash + position['collateral'] + (
+                position['entry'] - mark_price
+            ) * position['qty']
 
-        for candle in candles:
-            strategy.update(candle)
-
-            if not candle.is_closed:
-                continue
-
-            current_price = candle.close
-
-            # Track equity
-            if position:
-                if position['side'] == 'long':
-                    unrealized = (current_price - position['entry']) * position['qty']
-                else:
-                    unrealized = (position['entry'] - current_price) * position['qty']
-                result.equity_curve.append(balance + unrealized)
-            else:
-                result.equity_curve.append(balance)
-
-            if position is not None:
-                # We have an open position — check for exit
-                if strategy.should_exit(position['side']):
-                    # Close the trade at honest price
-                    costs = self.fee_model.total_cost(
-                        current_price, position['qty'], 'sell'
-                    )
-                    exit_price = costs['execution_price']
-                    exit_fee = costs['fee']
-
-                    # Calculate PnL
-                    if position['side'] == 'long':
-                        gross_pnl = (exit_price - position['entry']) * position['qty']
-                    else:
-                        gross_pnl = (position['entry'] - exit_price) * position['qty']
-
-                    net_pnl = gross_pnl - position['fee'] - exit_fee
-                    entry_value = position['entry'] * position['qty']
-                    net_pnl_pct = (net_pnl / entry_value * 100) if entry_value > 0 else 0
-
-                    balance += position['qty'] * exit_price - exit_fee
-                    balance = max(balance, 0)  # can't go negative
-
-                    result.trades.append({
-                        'entry_price': position['entry'],
-                        'exit_price': exit_price,
-                        'side': position['side'],
-                        'qty': position['qty'],
-                        'gross_pnl': gross_pnl,
-                        'fees': position['fee'] + exit_fee,
-                        'net_pnl': net_pnl,
-                        'net_pnl_pct': net_pnl_pct,
-                    })
-
-                    position = None
-
-            else:
-                # No position — check for entry
-                signal = strategy.should_enter()
-                if signal and balance > 10:  # minimum $10 to trade
-                    # Calculate how much to buy
-                    trade_amount = balance * trade_size_pct
-                    costs = self.fee_model.total_cost(
-                        current_price, trade_amount / current_price, 'buy'
-                    )
-                    entry_price = costs['execution_price']
-                    entry_fee = costs['fee']
-                    qty = (trade_amount - entry_fee) / entry_price
-
-                    if qty > 0:
-                        balance -= (qty * entry_price + entry_fee)
-                        position = {
-                            'side': signal,
-                            'entry': entry_price,
-                            'qty': qty,
-                            'fee': entry_fee,
-                        }
-
-        # If still holding at end, force close at last price (honest)
-        if position and candles:
-            last_price = candles[-1].close
+        def close_position(mark_price: float, reason: str):
+            nonlocal cash, position
+            exit_side = 'sell' if position['side'] == 'long' else 'buy'
             costs = self.fee_model.total_cost(
-                last_price, position['qty'], 'sell'
+                mark_price, position['qty'], exit_side, use_jitter=False
             )
             exit_price = costs['execution_price']
             exit_fee = costs['fee']
-
-            if position['side'] == 'long':
-                gross_pnl = (exit_price - position['entry']) * position['qty']
-            else:
-                gross_pnl = (position['entry'] - exit_price) * position['qty']
-
+            gross_pnl = (
+                (exit_price - position['entry']) * position['qty']
+                if position['side'] == 'long'
+                else (position['entry'] - exit_price) * position['qty']
+            )
             net_pnl = gross_pnl - position['fee'] - exit_fee
             entry_value = position['entry'] * position['qty']
-            net_pnl_pct = (net_pnl / entry_value * 100) if entry_value > 0 else 0
-
-            balance += position['qty'] * exit_price - exit_fee
-
+            if position['side'] == 'long':
+                cash += position['qty'] * exit_price - exit_fee
+            else:
+                cash += position['collateral'] + (
+                    position['entry'] - exit_price
+                ) * position['qty'] - exit_fee
             result.trades.append({
                 'entry_price': position['entry'],
                 'exit_price': exit_price,
@@ -299,11 +244,99 @@ class Backtester:
                 'gross_pnl': gross_pnl,
                 'fees': position['fee'] + exit_fee,
                 'net_pnl': net_pnl,
-                'net_pnl_pct': net_pnl_pct,
+                'net_pnl_pct': (net_pnl / entry_value * 100) if entry_value else 0.0,
+                'exit_reason': reason,
             })
+            position = None
 
-        result.ending_balance = balance
+        strategy.reset()
+        for candle in candles:
+            if not candle.is_closed:
+                continue
+            strategy.update(candle)
+            current_price = candle.close
+
+            if position is not None:
+                if strategy.should_exit(position['side']):
+                    close_position(current_price, 'strategy_exit')
+                result.equity_curve.append(equity(current_price))
+                continue
+
+            signal = strategy.should_enter()
+            if signal not in {'long', 'short'} or (signal == 'short' and not allow_short):
+                strategy.discard_pending_trade()
+                result.equity_curve.append(cash)
+                continue
+
+            plan = strategy.get_trade_plan()
+            stop_loss = plan.get('stop_loss') if plan else None
+            if stop_loss is None:
+                strategy.discard_pending_trade()
+                result.equity_curve.append(cash)
+                continue
+
+            entry_side = 'buy' if signal == 'long' else 'sell'
+            quote = self.fee_model.total_cost(
+                current_price, 1.0, entry_side, use_jitter=False
+            )
+            unit_risk = abs(quote['execution_price'] - stop_loss)
+            if unit_risk <= 0:
+                strategy.discard_pending_trade()
+                result.equity_curve.append(cash)
+                continue
+
+            current_equity = equity(current_price)
+            risk_amount = current_equity * max(risk_pct, 0) / 100
+            qty = risk_amount / unit_risk
+            max_notional = current_equity * max(max_notional_pct, 0) / 100
+            qty = min(qty, max_notional / quote['execution_price'])
+            # A 1x position must be fully collateralized including entry fees.
+            qty = min(
+                qty,
+                cash / (quote['execution_price'] * (1 + self.fee_model.taker_fee)),
+            )
+            if qty * quote['execution_price'] <= 10:
+                strategy.discard_pending_trade()
+                result.equity_curve.append(cash)
+                continue
+
+            costs = self.fee_model.total_cost(
+                current_price, qty, entry_side, use_jitter=False
+            )
+            entry_price = costs['execution_price']
+            entry_fee = costs['fee']
+            collateral = entry_price * qty if signal == 'short' else 0.0
+            if signal == 'long':
+                cash -= entry_price * qty + entry_fee
+            else:
+                cash -= collateral + entry_fee
+            position = {
+                'side': signal,
+                'entry': entry_price,
+                'qty': qty,
+                'fee': entry_fee,
+                'collateral': collateral,
+            }
+            result.equity_curve.append(equity(current_price))
+
+        if position and candles:
+            close_position(candles[-1].close, 'end_of_data')
+            result.equity_curve.append(cash)
+
+        result.ending_balance = cash
         return result
+
+    @staticmethod
+    def _periods_per_year(interval: str) -> int:
+        """Approximate number of crypto bars per calendar year."""
+        seconds_by_interval = {
+            '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800,
+            '1h': 3600, '2h': 7200, '4h': 14400, '1d': 86400,
+        }
+        seconds = seconds_by_interval.get(interval)
+        if seconds is None:
+            raise ValueError(f"Unsupported backtest interval: {interval}")
+        return int((365 * 24 * 60 * 60) / seconds)
 
     async def run(self, strategy: BaseStrategy, symbol: str,
                   interval: str = '1h',
@@ -321,6 +354,7 @@ class Backtester:
         """
         logger.info(f"\n[BACKTEST] Running {strategy.name} on {symbol} "
                     f"({interval}, {days} days)")
+        periods_per_year = self._periods_per_year(interval)
 
         # Download real data from Binance
         end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
@@ -352,18 +386,18 @@ class Backtester:
         # Run on training data
         train_result = self._run_on_candles(
             strategy, train_candles, 10000.0,
-            f"Train ({len(train_candles)} candles)"
+            f"Train ({len(train_candles)} candles)", periods_per_year
         )
 
         # Run on test data (the honest score)
         test_result = self._run_on_candles(
             strategy, test_candles, 10000.0,
-            f"Test ({len(test_candles)} candles)"
+            f"Test ({len(test_candles)} candles)", periods_per_year
         )
 
         # Log results honestly
-        logger.info(train_result.summary())
-        logger.info(test_result.summary())
+        logger.info(train_result.summary(self.min_sharpe, self.min_trades))
+        logger.info(test_result.summary(self.min_sharpe, self.min_trades))
 
         passed = test_result.passed(self.min_sharpe, self.min_trades)
         if passed:

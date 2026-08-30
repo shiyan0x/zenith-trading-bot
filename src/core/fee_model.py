@@ -45,6 +45,10 @@ class FeeModel:
         self.base_bps = slip_cfg['base_bps']            # 5 basis points
         self.vol_multiplier = slip_cfg['volatility_multiplier']  # 2.0
         self.max_bps = slip_cfg['max_bps']              # 30 bps cap
+        # Random fills make a live-paper run feel less artificial, but they
+        # must be opt-in: deterministic fills are essential for reproducible
+        # backtests and regression tests.
+        self.random_jitter_pct = slip_cfg.get('random_jitter_pct', 0.0)
 
     def calculate_fee(self, notional_value: float, is_maker: bool = False) -> float:
         """
@@ -67,7 +71,8 @@ class FeeModel:
 
     def calculate_slippage(self, price: float, side: str,
                            volatility: float = 0.0,
-                           order_size_ratio: float = 0.01) -> float:
+                           order_size_ratio: float = 0.01,
+                           use_jitter: bool = True) -> float:
         """
         Calculate slippage — the price impact of hitting the market.
 
@@ -96,10 +101,14 @@ class FeeModel:
         # Total slippage in basis points, capped
         total_bps = min(base + vol_component + size_component, self.max_bps)
 
-        # Add a tiny random jitter (±20% of total) to be realistic
-        # Real slippage isn't perfectly predictable
-        jitter = random.uniform(-0.2, 0.2) * total_bps
-        total_bps = max(1, total_bps + jitter)  # minimum 1 bp
+        # Optional random jitter for live-paper fills.  Keep it disabled by
+        # default and always disable it in backtests so identical inputs
+        # produce identical performance figures.
+        if use_jitter and self.random_jitter_pct > 0:
+            jitter = random.uniform(
+                -self.random_jitter_pct, self.random_jitter_pct
+            ) * total_bps
+            total_bps = max(1, total_bps + jitter)  # minimum 1 bp
 
         # Convert to price impact
         slippage_pct = total_bps / 10000.0  # bps to decimal
@@ -118,7 +127,9 @@ class FeeModel:
         return execution_price
 
     def total_cost(self, price: float, quantity: float, side: str,
-                   volatility: float = 0.0) -> dict:
+                   volatility: float = 0.0,
+                   order_size_ratio: float = 0.01,
+                   use_jitter: bool = True) -> dict:
         """
         Calculate the full honest cost of a trade.
 
@@ -128,7 +139,13 @@ class FeeModel:
         - total_cost: total USDT paid/received including all costs
         - slippage_bps: how much slippage was applied
         """
-        exec_price = self.calculate_slippage(price, side, volatility)
+        exec_price = self.calculate_slippage(
+            price,
+            side,
+            volatility=volatility,
+            order_size_ratio=order_size_ratio,
+            use_jitter=use_jitter,
+        )
         notional = exec_price * quantity
         fee = self.calculate_fee(notional)
 

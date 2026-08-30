@@ -311,7 +311,7 @@ function renderOverview(state) {
     // Alert banner
     const alertBanner = document.getElementById('alert-banner');
     if (state.alert_message) {
-        alertBanner.innerHTML = state.alert_message;
+        alertBanner.textContent = state.alert_message;
         alertBanner.classList.add('visible');
     } else if (totalTrades > 0) {
         const lastTrade = (state.recent_trades || []).slice(-1)[0];
@@ -704,8 +704,9 @@ function renderNewsFeed(state) {
         else ageText = Math.round(age / 1440) + 'd ago';
 
         const sentClass = item.sentiment_label || 'neutral';
-        const titleHtml = item.url
-            ? `<a href="${item.url}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>`
+        const safeUrl = safeExternalUrl(item.url);
+        const titleHtml = safeUrl
+            ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a>`
             : escapeHtml(item.title);
 
         html += `<div class="news-item">
@@ -729,6 +730,16 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function safeExternalUrl(rawUrl) {
+    if (!rawUrl) return '';
+    try {
+        const parsed = new URL(rawUrl, window.location.origin);
+        return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '';
+    } catch (_) {
+        return '';
+    }
 }
 
 // ─── LESSONS ───
@@ -880,6 +891,12 @@ function updateSidebarStatus(state) {
     } else if (state.status === 'running') {
         statusEl.className = 'profile-status live';
         statusEl.innerHTML = '<span class="pulse-dot"></span>Paper Trading';
+    } else if (state.status === 'backtesting') {
+        statusEl.className = 'profile-status backtesting';
+        statusEl.innerHTML = '<span class="pulse-dot"></span>Backtesting...';
+    } else if (state.status === 'initializing') {
+        statusEl.className = 'profile-status backtesting';
+        statusEl.innerHTML = '<span class="pulse-dot"></span>Initializing...';
     } else {
         statusEl.className = 'profile-status stopped';
         statusEl.innerHTML = '<span class="pulse-dot"></span>Stopped';

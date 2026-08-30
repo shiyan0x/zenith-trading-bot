@@ -29,11 +29,16 @@ class BaseStrategy(ABC):
         self.name = name
         self.params = params or {}
         self._candle_history: list[Candle] = []
+        # Keep enough data for intraday indicators without allowing a long
+        # session to grow memory and per-candle DataFrame work forever.
+        self.max_history = int(self.params.get('max_history', 2000))
 
     def update(self, candle: Candle):
         """Feed a new candle to the strategy. Only keeps closed candles."""
         if candle.is_closed:
             self._candle_history.append(candle)
+            if len(self._candle_history) > self.max_history:
+                del self._candle_history[:-self.max_history]
 
     @property
     def closes(self) -> list[float]:
@@ -62,6 +67,18 @@ class BaseStrategy(ABC):
     def reset(self):
         """Clear history — used when starting a new backtest run."""
         self._candle_history = []
+
+    def get_trade_plan(self) -> Optional[dict]:
+        """Return the pending entry's stop/target, if the strategy has one.
+
+        The engine uses this to size a position from the real stop distance.
+        Subclasses that do not use explicit stops may keep the default.
+        """
+        return None
+
+    def discard_pending_trade(self):
+        """Clear a signal that was rejected by the execution layer."""
+        return None
 
     @abstractmethod
     def should_enter(self) -> Optional[str]:

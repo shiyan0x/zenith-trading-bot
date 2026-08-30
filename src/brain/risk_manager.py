@@ -40,6 +40,7 @@ class RiskManager:
         self.breaker_triggered_at = None
         self.breaker_reason = ""
         self.breaker_history: list[dict] = []  # log of all triggers
+        self.revalidation_required = False
 
     def check_drawdown(self, current_drawdown_pct: float) -> bool:
         """
@@ -89,44 +90,74 @@ class RiskManager:
         if not self.is_breaker_active:
             return True
 
-        # Check if cooldown has passed
-        if self.breaker_triggered_at:
-            elapsed = (time.time() - self.breaker_triggered_at) / 60
-            if elapsed >= self.cooldown_minutes:
-                logger.info(
-                    f"[RISK] Cooldown expired after {elapsed:.0f} minutes. "
-                    f"Resetting breaker — will need backtest re-check."
-                )
-                self.is_breaker_active = False
-                return True
-
         return False
+
+    def needs_revalidation(self) -> bool:
+        """Return True after cooldown; trading remains stopped until checked."""
+        if not self.is_breaker_active or not self.breaker_triggered_at:
+            return False
+        elapsed = (time.time() - self.breaker_triggered_at) / 60
+        if elapsed < self.cooldown_minutes:
+            return False
+        if not self.revalidation_required:
+            self.revalidation_required = True
+            logger.info(
+                f"[RISK] Cooldown expired after {elapsed:.0f} minutes. "
+                "Backtest revalidation is now required before trading resumes."
+            )
+        return True
+
+    def complete_revalidation(self, passed: bool):
+        """Resume only after a fresh backtest has produced an eligible strategy."""
+        if passed:
+            self.is_breaker_active = False
+            self.breaker_triggered_at = None
+            self.breaker_reason = ""
+            self.revalidation_required = False
+            logger.info("[RISK] Revalidation passed. Circuit breaker reset.")
+        else:
+            # Start another complete cooldown; do not silently reopen trading.
+            self.breaker_triggered_at = time.time()
+            self.breaker_reason = "Revalidation failed; cooldown restarted"
+            self.revalidation_required = False
+            logger.warning("[RISK] Revalidation failed. Cooldown restarted.")
 
     def reset_breaker(self):
         """Manually reset the circuit breaker (after re-validation)."""
         self.is_breaker_active = False
         self.breaker_triggered_at = None
         self.breaker_reason = ""
+        self.revalidation_required = False
         logger.info("[RISK] Circuit breaker manually reset.")
 
-    def validate_trade_size(self, risk_pct: float, equity: float) -> float:
+    def calculate_position_quantity(self, risk_pct: float, equity: float,
+                                    entry_price: float, stop_loss: float,
+                                    max_notional_pct: float = 100.0) -> dict:
+        """Size a position from its actual stop distance, not its notional.
+
+        The returned quantity cannot lose more than ``risk_pct`` of equity at
+        the configured stop (before small fill differences), and is capped at
+        the requested 1x/notional limit for spot paper trading.
         """
-        Cap the trade size to the maximum allowed risk.
+        if equity <= 0 or entry_price <= 0:
+            return {'quantity': 0.0, 'risk_amount': 0.0, 'notional': 0.0}
 
-        Even if Kelly says "bet 5%", this caps it at max_risk_per_trade (2%).
+        unit_risk = abs(entry_price - stop_loss)
+        if unit_risk <= 0:
+            logger.warning("[RISK] Invalid stop distance; order rejected.")
+            return {'quantity': 0.0, 'risk_amount': 0.0, 'notional': 0.0}
 
-        Returns the allowed dollar amount to risk.
-        """
-        capped_pct = min(risk_pct, self.max_risk_per_trade)
-        amount = equity * (capped_pct / 100)
+        capped_pct = min(max(risk_pct, 0.0), self.max_risk_per_trade)
+        risk_amount = equity * (capped_pct / 100)
+        quantity = risk_amount / unit_risk
+        max_notional = equity * (max(max_notional_pct, 0.0) / 100)
+        quantity = min(quantity, max_notional / entry_price)
 
-        if risk_pct > self.max_risk_per_trade:
-            logger.info(
-                f"[RISK] Trade size capped: {risk_pct:.1f}% → "
-                f"{self.max_risk_per_trade}% (${amount:.2f})"
-            )
-
-        return amount
+        return {
+            'quantity': max(quantity, 0.0),
+            'risk_amount': risk_amount,
+            'notional': max(quantity, 0.0) * entry_price,
+        }
 
     def get_status(self) -> dict:
         """Current risk manager status for the dashboard."""
@@ -136,5 +167,6 @@ class RiskManager:
             'max_drawdown_pct': self.max_drawdown_pct,
             'max_risk_per_trade': self.max_risk_per_trade,
             'cooldown_minutes': self.cooldown_minutes,
+            'revalidation_required': self.revalidation_required,
             'total_breaker_triggers': len(self.breaker_history),
         }

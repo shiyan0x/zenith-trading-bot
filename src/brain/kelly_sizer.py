@@ -22,6 +22,7 @@ Source: https://en.wikipedia.org/wiki/Kelly_criterion
 """
 
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +42,15 @@ class KellySizer:
         self.fraction = kelly_cfg.get('fraction', 0.5)      # half-Kelly
         self.lookback = kelly_cfg.get('lookback_trades', 20)
         self.min_trades = kelly_cfg.get('min_trades_required', 10)
+        self.bootstrap_risk_pct = kelly_cfg.get('bootstrap_risk_pct', 1.0)
         self.max_risk_pct = risk_cfg.get('max_risk_per_trade_pct', 2)
 
         self._last_kelly = 0.0
         self._last_win_rate = 0.0
         self._last_rr_ratio = 0.0
+        self._last_status = 'insufficient_history'
 
-    def calculate_kelly(self, trades: list[dict]) -> float:
+    def calculate_kelly(self, trades: list[dict]) -> Optional[float]:
         """
         Calculate the raw Kelly fraction from recent trades.
 
@@ -60,7 +63,11 @@ class KellySizer:
                 f"[KELLY] Not enough trades ({len(trades)} < {self.min_trades}). "
                 f"Using minimum size."
             )
-            return 0.0
+            self._last_status = 'insufficient_history'
+            self._last_kelly = 0.0
+            self._last_win_rate = 0.0
+            self._last_rr_ratio = 0.0
+            return None
 
         # Use the most recent N trades
         recent = trades[-self.lookback:] if len(trades) > self.lookback else trades
@@ -85,6 +92,7 @@ class KellySizer:
         self._last_kelly = kelly
         self._last_win_rate = win_rate
         self._last_rr_ratio = rr_ratio
+        self._last_status = 'no_edge' if kelly <= 0 else 'edge'
 
         logger.info(
             f"[KELLY] Win rate: {win_rate*100:.1f}% | "
@@ -107,6 +115,13 @@ class KellySizer:
             Returns 0 if the strategy has no edge.
         """
         kelly = self.calculate_kelly(trades)
+
+        if kelly is None:
+            logger.info(
+                f"[KELLY] Using bootstrap risk size: "
+                f"{self.bootstrap_risk_pct:.2f}% of equity."
+            )
+            return min(self.bootstrap_risk_pct, self.max_risk_pct)
 
         if kelly <= 0:
             logger.warning(
@@ -133,4 +148,6 @@ class KellySizer:
             'rr_ratio': self._last_rr_ratio,
             'fraction_used': self.fraction,
             'max_risk_pct': self.max_risk_pct,
+            'bootstrap_risk_pct': self.bootstrap_risk_pct,
+            'status': self._last_status,
         }

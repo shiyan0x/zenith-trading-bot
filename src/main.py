@@ -21,6 +21,8 @@ import time
 import asyncio
 import logging
 import signal
+import statistics
+from contextlib import suppress
 from datetime import datetime, timezone
 
 # Add project root to path
@@ -32,9 +34,8 @@ from src.core.fee_model import FeeModel
 from src.core.paper_wallet import PaperWallet
 from src.core.order_engine import OrderEngine
 from src.core.trade_logger import TradeLogger
-from src.strategies.sma_crossover import SMACrossover
-from src.strategies.rsi_mean_revert import RSIMeanRevert
-from src.strategies.breakout import BreakoutStrategy
+from src.strategies.ema_vwap_rsi import EmaVwapRsiStrategy
+from src.strategies.mean_reversion import MeanReversionStrategy
 from src.brain.backtester import Backtester
 from src.brain.kelly_sizer import KellySizer
 from src.brain.risk_manager import RiskManager
@@ -108,20 +109,22 @@ class TradingBot:
 
         # ─── Strategies ───
         strat_cfg = config.get('strategies', {})
-        self.all_strategies = []
-        self.active_strategies = []  # only strategies that passed backtest
+        self.strategy_specs = []
+        self.active_strategies = {symbol: [] for symbol in config['symbols']}
+        self.allow_short = (
+            config.get('trading', {}).get('allow_short', False)
+            and self.fee_model.mode == 'futures'
+        )
 
-        if strat_cfg.get('sma_crossover', {}).get('enabled', True):
-            self.all_strategies.append(
-                SMACrossover(strat_cfg.get('sma_crossover', {}))
+        if strat_cfg.get('ema_vwap_rsi', {}).get('enabled', True):
+            self.strategy_specs.append(
+                ('ema_vwap_rsi', EmaVwapRsiStrategy,
+                 strat_cfg.get('ema_vwap_rsi', {}))
             )
-        if strat_cfg.get('rsi_mean_revert', {}).get('enabled', True):
-            self.all_strategies.append(
-                RSIMeanRevert(strat_cfg.get('rsi_mean_revert', {}))
-            )
-        if strat_cfg.get('breakout', {}).get('enabled', True):
-            self.all_strategies.append(
-                BreakoutStrategy(strat_cfg.get('breakout', {}))
+        if strat_cfg.get('mean_reversion', {}).get('enabled', True):
+            self.strategy_specs.append(
+                ('mean_reversion', MeanReversionStrategy,
+                 strat_cfg.get('mean_reversion', {}))
             )
 
         # ─── Dashboard State (shared dict) ───
@@ -140,6 +143,8 @@ class TradingBot:
 
         # ─── Timeframe switching ───
         self._pending_timeframe = None
+        self._pending_revalidation = False
+        self._revalidation_task = None
 
         # ─── Backtest Results ───
         self.backtest_results = []
@@ -147,18 +152,28 @@ class TradingBot:
         logger.info("[INIT] Trading Bot initialized")
         logger.info(f"[INIT] Starting balance: ${self.wallet.starting_balance:,.2f} (FAKE)")
         logger.info(f"[INIT] Symbols: {config['symbols']}")
-        logger.info(f"[INIT] Strategies: {[s.name for s in self.all_strategies]}")
+        logger.info(f"[INIT] Strategies: {[key for key, _, _ in self.strategy_specs]}")
+        if not self.allow_short:
+            logger.info("[INIT] Spot mode: short signals are ignored.")
 
     def _update_dashboard_state(self, prices: dict = None):
         """Update the shared state dict that the dashboard reads."""
         prices = prices or self.bot_state.get('prices', {})
+        # Preserve explicit phase statuses ('backtesting', 'initializing')
+        # Only update status when the bot is in live-trading mode
+        if self.running and self.bot_state.get('status') not in ('backtesting', 'initializing'):
+            current_status = 'running'
+        elif not self.running:
+            current_status = 'stopped'
+        else:
+            current_status = self.bot_state.get('status', 'initializing')
         self.bot_state.update({
             'wallet': self.wallet.to_dict(prices),
             'risk': self.risk_manager.get_status(),
             'kelly': self.kelly.get_stats(),
-            'recent_trades': self.wallet.closed_trades[-50:],
+            'recent_trades': self.wallet.closed_trades[-100:],
             'prices': prices,
-            'status': 'running' if self.running else 'stopped',
+            'status': current_status,
             'timeframe': self.config.get('timeframe', '1m'),
             'news': self.news_feed.get_news_dicts(),
             'sentiment': self.sentiment.get_summary(),
@@ -174,10 +189,19 @@ class TradingBot:
         self.config['timeframe'] = new_tf
         self.bot_state['timeframe'] = new_tf
         self._pending_timeframe = new_tf
+        self._pending_revalidation = True
 
-        # Reset strategy candle history since interval changed
-        for strategy in self.active_strategies:
-            strategy.reset()
+        # A stop/target calculated for one interval is not valid on another.
+        # Close first, then clear signal state before reconnecting.
+        prices = self.bot_state.get('prices', {})
+        if self.wallet.positions:
+            self.order_engine.close_all(prices)
+            logger.warning("[BOT] Closed open positions before timeframe change")
+
+        # Reset strategy candle history since interval changed.
+        for strategies in self.active_strategies.values():
+            for strategy in strategies:
+                strategy.reset()
         logger.info(f"[BOT] Strategies reset for {new_tf} candles")
 
         # Stop current WebSocket — the run loop will reconnect
@@ -194,48 +218,50 @@ class TradingBot:
         logger.info("  STEP 3: RUNNING BACKTESTS ON REAL HISTORICAL DATA")
         logger.info("=" * 60)
 
+        # Signal dashboard that we are in the backtest phase
+        self.bot_state['status'] = 'backtesting'
+
         symbols = self.config['symbols']
         bt_days = self.config.get('backtest', {}).get('history_days', 90)
         strategy_results = []
+        active = {symbol: [] for symbol in symbols}
 
-        for strategy in self.all_strategies:
+        for _, strategy_factory, params in self.strategy_specs:
             for symbol in symbols:
+                strategy = strategy_factory(dict(params))
                 try:
                     result = await self.backtester.run(
                         strategy=strategy,
                         symbol=symbol,
-                        interval='1h',  # 1-hour candles for backtest
+                        interval=self.config.get('timeframe', '15m'),
                         days=bt_days
                     )
                     if result:
                         strategy_results.append(result)
-                        self.backtest_results.append(result)
+                        if result['passed']:
+                            # Live instances must not reuse a backtest's
+                            # candle/position state, and must remain isolated
+                            # per symbol.
+                            active[symbol].append(strategy_factory(dict(params)))
                 except Exception as e:
                     logger.error(f"[BACKTEST] Error testing {strategy.name} on {symbol}: {e}")
 
-        # Filter: only keep strategies that passed on test data
+        self.backtest_results = strategy_results
+        self.active_strategies = active
         passed = [r for r in strategy_results if r['passed']]
 
         # Update dashboard with backtest results
         self.bot_state['strategies'] = [
-            r['test'].to_dict() for r in strategy_results
+            r['test'].to_dict(self.backtester.min_sharpe, self.backtester.min_trades)
+            for r in strategy_results
         ]
 
         if passed:
-            # Deduplicate: one strategy instance per name
-            seen = set()
-            for r in passed:
-                sname = r['strategy']
-                if sname not in seen:
-                    seen.add(sname)
-                    for s in self.all_strategies:
-                        if s.name == sname:
-                            self.active_strategies.append(s)
-                            break
-
-            logger.info(f"\n[BACKTEST] ✅ {len(self.active_strategies)} strategies PASSED:")
-            for s in self.active_strategies:
-                logger.info(f"  → {s.name}")
+            active_count = sum(len(items) for items in active.values())
+            logger.info(f"\n[BACKTEST] ✅ {active_count} strategy/symbol pairs PASSED:")
+            for symbol, strategies in active.items():
+                for strategy in strategies:
+                    logger.info(f"  → {strategy.name} on {symbol}")
         else:
             logger.warning(
                 "\n[BACKTEST] ❌ NO strategies passed the backtest.\n"
@@ -244,23 +270,60 @@ class TradingBot:
                 "  The bot will still run and show you live prices, "
                 "but it won't take trades until a strategy passes.\n"
             )
-            # Activate all anyway for demo/observation purposes
-            # but with minimum position sizes
-            self.active_strategies = list(self.all_strategies)
-            logger.info(
-                "  [NOTE] Activating all strategies in observation mode "
-                "(small position sizes) so you can watch them work."
-            )
 
+        # Switch to 'running' now that backtests are done
+        self.bot_state['status'] = 'running'
         self._update_dashboard_state()
 
-    def _on_candle(self, candle: Candle):
+    @staticmethod
+    def _estimate_volatility(strategy) -> float:
+        """Estimate recent close-to-close volatility for the slippage model."""
+        closes = strategy.closes[-21:]
+        if len(closes) < 3:
+            return 0.0
+        returns = [
+            (current / previous) - 1
+            for previous, current in zip(closes, closes[1:])
+            if previous > 0
+        ]
+        return statistics.pstdev(returns) if len(returns) > 1 else 0.0
+
+    def _strategy_trades(self, symbol: str, strategy_name: str) -> list[dict]:
+        return [
+            trade for trade in self.wallet.closed_trades
+            if trade.get('symbol') == symbol
+            and trade.get('strategy_name') == strategy_name
+        ]
+
+    def _discard_trade_plans(self, symbol: str = None):
+        groups = (
+            [self.active_strategies.get(symbol, [])]
+            if symbol else self.active_strategies.values()
+        )
+        for strategies in groups:
+            for strategy in strategies:
+                strategy.discard_pending_trade()
+
+    async def _revalidate_after_breaker(self):
+        """Require a fresh out-of-sample pass before reopening the breaker."""
+        try:
+            await self.run_backtests()
+            passed = any(self.active_strategies.values())
+            self.risk_manager.complete_revalidation(passed)
+        except Exception as exc:
+            logger.exception("[RISK] Revalidation failed unexpectedly: %s", exc)
+            self.risk_manager.complete_revalidation(False)
+        finally:
+            self._revalidation_task = None
+            self._update_dashboard_state()
+
+    def _on_candle(self, symbol: str, candle: Candle):
         """
         Called on every new candle from the WebSocket.
         This is the live trading loop heartbeat.
         """
-        symbol = self.config['symbols'][0]  # primary symbol
-        prices = {symbol: candle.close}
+        prices = dict(self.bot_state.get('prices', {}))
+        prices[symbol] = candle.close
         self.bot_state['prices'] = prices
 
         # Only act on closed candles (complete data)
@@ -270,8 +333,17 @@ class TradingBot:
 
         logger.debug(f"[CANDLE] {candle}")
 
+        strategies = self.active_strategies.get(symbol, [])
+        for strategy in strategies:
+            strategy.update(candle)
+
         # ─── Risk Check ───
         if not self.risk_manager.can_trade():
+            if (self.risk_manager.needs_revalidation()
+                    and self._revalidation_task is None):
+                self._revalidation_task = asyncio.create_task(
+                    self._revalidate_after_breaker()
+                )
             self._update_dashboard_state(prices)
             return
 
@@ -279,57 +351,117 @@ class TradingBot:
         if self.risk_manager.check_drawdown(current_drawdown):
             # Circuit breaker triggered — close everything
             self.order_engine.close_all(prices)
+            self._discard_trade_plans()
             self._update_dashboard_state(prices)
             return
 
-        # ─── Strategy Signals ───
-        for strategy in self.active_strategies:
-            strategy.update(candle)
-
-            # Check for exit first (if we have a position)
-            pos = self.wallet.get_position_for_symbol(symbol)
-            if pos:
-                if strategy.should_exit(pos.side):
-                    self.order_engine.market_sell(
+        # ─── Position Exit ───
+        pos = self.wallet.get_position_for_symbol(symbol)
+        if pos:
+            owner = next(
+                (strategy for strategy in strategies
+                 if strategy.name == pos.strategy_name),
+                None,
+            )
+            if owner is None:
+                logger.error(
+                    f"[BOT] Position {pos.id} has no matching strategy owner; "
+                    "leaving it open for manual review."
+                )
+            elif owner.should_exit(pos.side):
+                volatility = self._estimate_volatility(owner)
+                order_size_ratio = pos.quantity / max(candle.volume, 1e-12)
+                self.order_engine.close_position(
                         symbol=symbol,
                         position_id=pos.id,
-                        current_price=candle.close
+                        current_price=candle.close,
+                        volatility=volatility,
+                        order_size_ratio=order_size_ratio,
                     )
-                continue  # don't enter and exit on same candle
+                owner.discard_pending_trade()
+            self._update_dashboard_state(prices)
+            return  # do not enter and exit on the same candle
 
-            # Check for entry
+        # ─── Strategy Entry ───
+        for strategy in strategies:
             signal = strategy.should_enter()
-            if signal == 'long' and not self.wallet.get_position_for_symbol(symbol):
-                # ─── News Sentiment Filter ───
-                if self.sentiment.should_block_trade():
-                    logger.info(
-                        f"[BOT] Entry BLOCKED by sentiment filter "
-                        f"({self.sentiment._overall_label}: "
-                        f"{self.sentiment._overall_score:+.3f})"
-                    )
-                    break
+            if signal is None:
+                continue
+            if signal == 'short' and not self.allow_short:
+                logger.info(f"[BOT] Ignoring short signal from {strategy.name}: spot mode")
+                strategy.discard_pending_trade()
+                continue
+            if signal not in {'long', 'short'}:
+                strategy.discard_pending_trade()
+                continue
 
-                # Calculate position size using Kelly
-                kelly_pct = self.kelly.get_position_size_pct(
-                    self.wallet.closed_trades
+            if self.sentiment.should_block_trade():
+                logger.info(
+                    f"[BOT] Entry BLOCKED by sentiment filter "
+                    f"({self.sentiment._overall_label}: "
+                    f"{self.sentiment._overall_score:+.3f})"
                 )
-                if kelly_pct <= 0:
-                    # Not enough data or no edge — use minimum size
-                    kelly_pct = 1.0  # 1% of equity
+                strategy.discard_pending_trade()
+                break
 
-                trade_amount = self.risk_manager.validate_trade_size(
-                    kelly_pct,
-                    self.wallet.total_equity(prices)
-                )
+            plan = strategy.get_trade_plan()
+            if not plan or plan.get('stop_loss') is None:
+                logger.warning(f"[BOT] {strategy.name} emitted a signal without a stop; rejected")
+                strategy.discard_pending_trade()
+                continue
 
-                if trade_amount > 10:  # minimum $10
-                    quantity = trade_amount / candle.close
-                    self.order_engine.market_buy(
-                        symbol=symbol,
-                        quantity=quantity,
-                        current_price=candle.close
-                    )
-                break  # only one entry per candle
+            kelly_pct = self.kelly.get_position_size_pct(
+                self._strategy_trades(symbol, strategy.name)
+            )
+            if kelly_pct <= 0:
+                logger.warning(f"[BOT] {strategy.name} has no positive Kelly edge; entry skipped")
+                strategy.discard_pending_trade()
+                continue
+
+            volatility = self._estimate_volatility(strategy)
+            entry_side = 'buy' if signal == 'long' else 'sell'
+            quote = self.fee_model.total_cost(
+                candle.close, 1.0, entry_side, volatility,
+                use_jitter=False,
+            )
+            sizing = self.risk_manager.calculate_position_quantity(
+                kelly_pct,
+                self.wallet.total_equity(prices),
+                quote['execution_price'],
+                plan['stop_loss'],
+                self.config.get('risk', {}).get('max_notional_pct', 100),
+            )
+            quantity = sizing['quantity']
+            quantity = min(
+                quantity,
+                self.wallet.cash / (
+                    quote['execution_price'] * (1 + self.fee_model.taker_fee)
+                ),
+            )
+            order_size_ratio = quantity / max(candle.volume, 1e-12)
+
+            if quantity * quote['execution_price'] <= 10:
+                logger.info(f"[BOT] {strategy.name} position below $10 minimum; skipped")
+                strategy.discard_pending_trade()
+                continue
+
+            order_kwargs = {
+                'symbol': symbol,
+                'quantity': quantity,
+                'current_price': candle.close,
+                'volatility': volatility,
+                'order_size_ratio': order_size_ratio,
+                'strategy_name': strategy.name,
+                'stop_loss': plan['stop_loss'],
+                'take_profit': plan.get('take_profit'),
+            }
+            if signal == 'long':
+                position = self.order_engine.market_buy(**order_kwargs)
+            else:
+                position = self.order_engine.market_short(**order_kwargs)
+            if position is None:
+                strategy.discard_pending_trade()
+            break  # one position per symbol
 
         self._update_dashboard_state(prices)
 
@@ -364,13 +496,16 @@ class TradingBot:
         logger.info(f"  Dashboard: http://{dash_cfg.get('host', '127.0.0.1')}:{dash_cfg.get('port', 5000)}")
         logger.info("=" * 60 + "\n")
 
-        # ─── Step 2: Verify connection with a live price ───
-        logger.info("[STEP 2] Fetching live price to verify connection...")
-        primary_symbol = self.config['symbols'][0]
+        # ─── Step 2: Verify every configured market ───
+        logger.info("[STEP 2] Fetching live prices to verify connection...")
+        symbols = self.config['symbols']
         try:
-            price = await self.market_feed.get_current_price(primary_symbol)
-            logger.info(f"[STEP 2] ✅ Live {primary_symbol} price: ${price:,.2f}")
-            self.bot_state['prices'] = {primary_symbol: price}
+            values = await asyncio.gather(
+                *(self.market_feed.get_current_price(symbol) for symbol in symbols)
+            )
+            self.bot_state['prices'] = dict(zip(symbols, values))
+            for symbol, price in self.bot_state['prices'].items():
+                logger.info(f"[STEP 2] ✅ Live {symbol} price: ${price:,.2f}")
         except Exception as e:
             logger.error(f"[STEP 2] ❌ Could not fetch live price: {e}")
             logger.error("  Check your internet connection and try again.")
@@ -382,8 +517,13 @@ class TradingBot:
         # ─── Step 4: Start Live Trading ───
         logger.info("\n" + "=" * 60)
         logger.info("  STEP 4: STARTING LIVE PAPER TRADING")
-        logger.info(f"  Streaming {primary_symbol} via WebSocket...")
-        logger.info(f"  Active strategies: {[s.name for s in self.active_strategies]}")
+        logger.info(f"  Streaming {', '.join(symbols)} via WebSocket...")
+        logger.info(
+            "  Active strategies: " + str({
+                symbol: [strategy.name for strategy in strategies]
+                for symbol, strategies in self.active_strategies.items()
+            })
+        )
         logger.info("=" * 60 + "\n")
 
         # ─── Step 3.5: Initial News Fetch ───
@@ -421,25 +561,35 @@ class TradingBot:
         news_task = asyncio.create_task(fetch_news_periodically())
 
         try:
-            # Main stream loop — restarts when timeframe changes
+            # Main stream loop — one live stream per configured symbol, all
+            # restarted together when the selected timeframe changes.
             while self.running:
                 self._pending_timeframe = None
                 current_tf = self.config.get('timeframe', '1m')
-                logger.info(f"[WS] Starting stream: {primary_symbol} @ {current_tf}")
+                logger.info(f"[WS] Starting streams: {symbols} @ {current_tf}")
 
                 # Re-enable market feed for new stream
                 self.market_feed._running = True
 
-                await self.market_feed.stream_live(
-                    symbol=primary_symbol,
-                    interval=current_tf,
-                    on_candle=self._on_candle
+                await asyncio.gather(*(
+                    self.market_feed.stream_live(
+                        symbol=symbol,
+                        interval=current_tf,
+                        on_candle=lambda candle, current_symbol=symbol:
+                            self._on_candle(current_symbol, candle),
+                    )
+                    for symbol in symbols
+                )
                 )
 
                 # If we get here, stream_live exited.
                 # Check if it was a timeframe change or a real stop
                 if self._pending_timeframe:
                     logger.info(f"[BOT] Reconnecting with {self._pending_timeframe} timeframe...")
+                    if self._pending_revalidation:
+                        self._pending_revalidation = False
+                        logger.info("[BOT] Revalidating strategies for the new timeframe...")
+                        await self.run_backtests()
                     await asyncio.sleep(1)  # brief pause before reconnect
                     continue
                 else:
@@ -451,18 +601,25 @@ class TradingBot:
             self.running = False
             update_task.cancel()
             news_task.cancel()
+            if self._revalidation_task:
+                self._revalidation_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await update_task
+            with suppress(asyncio.CancelledError):
+                await news_task
             self._print_final_report()
 
     def _print_final_report(self):
         """Print an honest final performance report."""
-        stats = self.wallet.get_stats()
         prices = self.bot_state.get('prices', {})
+        stats = self.wallet.get_stats(prices)
 
         logger.info("\n" + "=" * 60)
         logger.info("  📊 FINAL HONEST REPORT")
         logger.info("=" * 60)
         logger.info(f"  Starting Balance:   ${stats['starting_balance']:,.2f} (FAKE)")
         logger.info(f"  Current Cash:       ${stats['current_cash']:,.2f}")
+        logger.info(f"  Current Equity:     ${stats['current_equity']:,.2f}")
         logger.info(f"  Total Trades:       {stats['total_trades']}")
         logger.info(f"  Win Rate:           {stats['win_rate_pct']:.1f}%")
         logger.info(f"  Avg Win:            ${stats['avg_win']:.2f}")
