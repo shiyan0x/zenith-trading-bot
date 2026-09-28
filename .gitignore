@@ -7,11 +7,16 @@ dist/
 build/
 *.egg
 
-# Runtime data (regenerated on each run)
-data/logs/bot.log
-data/logs/trades.csv
-data/logs/trades.json
-data/history/
+# Databases & Runtime data
+*.db
+*.sqlite
+*.sqlite3
+data/logs/*
+!data/logs/.gitkeep
+data/history/*
+!data/history/.gitkeep
+data/reports/*
+!data/reports/.gitkeep
 
 # IDE
 .vscode/

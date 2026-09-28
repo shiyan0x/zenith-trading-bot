@@ -51,6 +51,21 @@ def create_dashboard_app(bot_state: dict) -> tuple:
     # policy instead of accepting browser clients from every origin.
     socketio = SocketIO(app, async_mode='threading')
 
+    # Register research lab API routes (read-only, optional)
+    try:
+        from src.research.research_api import register_research_routes
+        register_research_routes(app)
+    except ImportError:
+        pass  # Research lab not installed — dashboard still works
+
+    # Register execution API routes (optional)
+    try:
+        from src.execution.execution_api import register_execution_routes
+        register_execution_routes(app)
+    except ImportError:
+        pass
+
+
     # Callback for timeframe changes — set by main.py
     app._on_timeframe_change = None
 
@@ -66,6 +81,12 @@ def create_dashboard_app(bot_state: dict) -> tuple:
         """Serve the dashboard JavaScript."""
         return send_from_directory(dashboard_dir, 'dashboard.js',
                                    mimetype='application/javascript')
+
+    @app.route('/api/auth/token')
+    def get_auth_token():
+        """API endpoint — returns local dashboard session token for authorized controls."""
+        from src.dashboard.auth import get_dashboard_token
+        return jsonify({'token': get_dashboard_token()})
 
     @app.route('/api/state')
     def get_state():
@@ -221,3 +242,33 @@ def run_dashboard(bot_state: dict, host: str = '127.0.0.1', port: int = 5000):
     thread.start()
 
     return app, socketio
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)-7s | %(message)s')
+    _root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    host = '127.0.0.1'
+    port = 5000
+    cfg_file = os.path.join(_root, 'config', 'settings.json')
+    if os.path.exists(cfg_file):
+        with open(cfg_file, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+            host = cfg.get('dashboard', {}).get('host', host)
+            port = cfg.get('dashboard', {}).get('port', port)
+
+    standalone_state = {
+        'wallet': {'starting_balance': 10000, 'current_cash': 10000, 'total_equity': 10000, 'open_positions': [], 'closed_trades': []},
+        'risk': {'breaker_active': False},
+        'kelly': {},
+        'strategies': [],
+        'recent_trades': [],
+        'prices': {},
+        'status': 'standalone',
+        'timeframe': '15m',
+        'news': [],
+        'sentiment': {},
+    }
+    app, socketio = create_dashboard_app(standalone_state)
+    logger.info(f"[DASHBOARD] Running standalone dashboard at http://{host}:{port}")
+    socketio.run(app, host=host, port=port, allow_unsafe_werkzeug=True, use_reloader=False)
+

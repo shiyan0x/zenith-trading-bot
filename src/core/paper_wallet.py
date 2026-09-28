@@ -86,6 +86,25 @@ class Position:
             result['unrealized_pnl_pct'] = self.unrealized_pnl_pct(current_price)
         return result
 
+    @classmethod
+    def from_dict(cls, d: dict) -> 'Position':
+        """Construct a Position object from a dictionary snapshot."""
+        pos = cls(
+            symbol=d['symbol'],
+            side=d['side'],
+            quantity=float(d['quantity']),
+            entry_price=float(d['entry_price']),
+            fee_paid=float(d.get('fee_paid', 0.0)),
+            timestamp=float(d.get('timestamp', time.time())),
+            strategy_name=d.get('strategy_name', ''),
+            stop_loss=float(d['stop_loss']) if d.get('stop_loss') is not None else None,
+            take_profit=float(d['take_profit']) if d.get('take_profit') is not None else None,
+            collateral=float(d.get('collateral', 0.0)),
+        )
+        if 'id' in d:
+            pos.id = d['id']
+        return pos
+
 
 class PaperWallet:
     """
@@ -345,4 +364,40 @@ class PaperWallet:
             ],
             'drawdown_pct': self.get_drawdown(prices),
             'stats': self.get_stats(prices),
+            'peak_equity': self.peak_equity,
+            'total_fees_paid': self.total_fees_paid,
+            'closed_trades': self.closed_trades,
         }
+
+    def restore_state(self, state: dict):
+        """Restore wallet state from a saved dictionary snapshot."""
+        if 'cash' in state:
+            self.cash = float(state['cash'])
+        if 'peak_equity' in state:
+            self.peak_equity = float(state['peak_equity'])
+        if 'total_fees_paid' in state:
+            self.total_fees_paid = float(state['total_fees_paid'])
+        if 'total_trades' in state:
+            self.total_trades = int(state['total_trades'])
+        elif 'stats' in state and 'total_trades' in state['stats']:
+            self.total_trades = int(state['stats']['total_trades'])
+        if 'winning_trades' in state:
+            self.winning_trades = int(state['winning_trades'])
+        elif 'stats' in state and 'winning_trades' in state['stats']:
+            self.winning_trades = int(state['stats']['winning_trades'])
+        if 'losing_trades' in state:
+            self.losing_trades = int(state['losing_trades'])
+        elif 'stats' in state and 'losing_trades' in state['stats']:
+            self.losing_trades = int(state['stats']['losing_trades'])
+        if 'closed_trades' in state:
+            self.closed_trades = list(state['closed_trades'])
+        if 'positions' in state:
+            self.positions = {}
+            for p_data in state['positions']:
+                pos = Position.from_dict(p_data)
+                self.positions[pos.id] = pos
+        logger.info(
+            f"[WALLET] State restored: cash=${self.cash:.2f}, "
+            f"open_positions={len(self.positions)}, total_trades={self.total_trades}"
+        )
+

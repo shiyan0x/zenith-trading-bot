@@ -42,6 +42,20 @@ from src.brain.risk_manager import RiskManager
 from src.brain.sentiment import SentimentAnalyzer
 from src.core.news_feed import NewsFeed
 from src.dashboard.server import run_dashboard
+from src.execution import (
+    PaperBrokerAdapter,
+    LiveRiskGuardian,
+    LiveModeAuth,
+    EmergencyStop,
+    ExecutionTracker,
+    PaperVsBacktestComparator,
+    StaleDataDetector,
+    ReconnectHandler,
+    DuplicateEventFilter,
+    StatePersistence,
+    NotificationManager,
+    init_execution_api,
+)
 
 # ─── Ensure log directory exists before setting up logging ───
 _log_dir = os.path.join(PROJECT_ROOT, 'data', 'logs')
@@ -102,6 +116,42 @@ class TradingBot:
         self.backtester = Backtester(config, self.market_feed, self.fee_model)
         self.kelly = KellySizer(config)
         self.risk_manager = RiskManager(config)
+
+        # ─── Execution & Resilience Components ───
+        self.execution_tracker = ExecutionTracker()
+        self.persistence = StatePersistence()
+        self.persistence.restore_wallet(self.wallet)
+
+        self.broker = PaperBrokerAdapter(self.order_engine, self.wallet)
+        self.stale_detector = StaleDataDetector(
+            default_max_age_seconds=config.get('stale_threshold_seconds', 120.0)
+        )
+        self.reconnect_handler = ReconnectHandler()
+        self.duplicate_filter = DuplicateEventFilter()
+        self.notification_mgr = NotificationManager()
+        self.emergency_stop = EmergencyStop()
+
+        risk_cfg = config.get('risk', {})
+        self.live_guardian = LiveRiskGuardian(
+            max_order_usd=risk_cfg.get('max_order_usd', 1000.0),
+            daily_loss_limit_usd=risk_cfg.get('daily_loss_limit_usd', 300.0),
+            max_exposure_pct=risk_cfg.get('max_exposure_pct', 50.0),
+            max_open_positions=risk_cfg.get('max_open_positions', 2),
+            leverage_cap=1.0,
+        )
+        self.live_auth = LiveModeAuth(self.live_guardian, config['symbols'])
+        self.paper_comparator = PaperVsBacktestComparator()
+
+        init_execution_api(
+            tracker=self.execution_tracker,
+            emergency_stop=self.emergency_stop,
+            comparator=self.paper_comparator,
+            guardian=self.live_guardian,
+            live_auth=self.live_auth,
+            stale_detector=self.stale_detector,
+            notification_mgr=self.notification_mgr,
+            wallet=self.wallet,
+        )
 
         # ─── News & Sentiment ───
         self.news_feed = NewsFeed(config)
@@ -248,6 +298,29 @@ class TradingBot:
 
         self.backtest_results = strategy_results
         self.active_strategies = active
+
+        # Load approved AI strategies into paper trading
+        try:
+            from src.research.experiment_store import ExperimentStore
+            from src.research.strategy_registry import StrategyRegistry
+            from src.research.promotion_gate import PromotionGate
+            from src.execution.paper_strategy_loader import PaperStrategyLoader
+
+            db_path = os.path.join(PROJECT_ROOT, 'data', 'research.db')
+            if os.path.exists(db_path):
+                store = ExperimentStore(db_path)
+                registry = StrategyRegistry(store)
+                gate = PromotionGate(store, registry)
+                loader = PaperStrategyLoader(registry, gate)
+                for strat_info in loader.get_active_paper_strategies():
+                    try:
+                        for symbol in symbols:
+                            active[symbol].append(loader.load_strategy_instance(strat_info['id']))
+                        logger.info(f"[BACKTEST] Loaded approved AI paper strategy: {strat_info.get('name')}")
+                    except Exception as e:
+                        logger.warning(f"[BACKTEST] AI strategy {strat_info.get('name')} not loaded: {e}")
+        except Exception as e:
+            logger.debug(f"[BACKTEST] Research store not loaded: {e}")
         passed = [r for r in strategy_results if r['passed']]
 
         # Update dashboard with backtest results
@@ -326,6 +399,19 @@ class TradingBot:
         prices[symbol] = candle.close
         self.bot_state['prices'] = prices
 
+        # Emergency Stop Check
+        if self.emergency_stop.is_halted:
+            logger.debug("[BOT] Emergency stop active; halting candle processing.")
+            self._update_dashboard_state(prices)
+            return
+
+        # Duplicate Candle Event Filter
+        if self.duplicate_filter.is_duplicate_candle(symbol, candle.timestamp, candle.is_closed):
+            return
+
+        # Record Tick for Stale Data Detection
+        self.stale_detector.record_tick(symbol, candle.timestamp)
+
         # Only act on closed candles (complete data)
         if not candle.is_closed:
             self._update_dashboard_state(prices)
@@ -371,13 +457,25 @@ class TradingBot:
             elif owner.should_exit(pos.side):
                 volatility = self._estimate_volatility(owner)
                 order_size_ratio = pos.quantity / max(candle.volume, 1e-12)
-                self.order_engine.close_position(
+                trade = self.order_engine.close_position(
                         symbol=symbol,
                         position_id=pos.id,
                         current_price=candle.close,
                         volatility=volatility,
                         order_size_ratio=order_size_ratio,
                     )
+                if trade:
+                    self.live_guardian.record_trade_result(trade.get('net_pnl', 0.0))
+                    self.execution_tracker.record_fill(
+                        fill_id=f"exit_{trade['id']}",
+                        order_id=trade['id'],
+                        symbol=symbol,
+                        side='sell' if pos.side == 'long' else 'buy',
+                        exec_price=trade.get('exit_price', candle.close),
+                        exec_qty=trade.get('quantity', pos.quantity),
+                        fee=trade.get('total_fees', 0.0),
+                    )
+                    self.persistence.save_wallet_state(self.wallet)
                 owner.discard_pending_trade()
             self._update_dashboard_state(prices)
             return  # do not enter and exit on the same candle
@@ -392,6 +490,10 @@ class TradingBot:
                 strategy.discard_pending_trade()
                 continue
             if signal not in {'long', 'short'}:
+                strategy.discard_pending_trade()
+                continue
+
+            if self.duplicate_filter.is_duplicate_signal(strategy.name, symbol, candle.timestamp, signal):
                 strategy.discard_pending_trade()
                 continue
 
@@ -445,6 +547,27 @@ class TradingBot:
                 strategy.discard_pending_trade()
                 continue
 
+            # External Live Risk Guardian Check
+            is_safe, reason = self.live_guardian.validate_order(
+                symbol=symbol,
+                side=signal,
+                quantity=quantity,
+                price=quote['execution_price'],
+                equity=self.wallet.total_equity(prices),
+                open_positions=list(self.wallet.positions.values()),
+            )
+            if not is_safe:
+                logger.warning(f"[BOT] Order blocked by Risk Guardian: {reason}")
+                self.execution_tracker.record_signal(
+                    strategy_name=strategy.name,
+                    symbol=symbol,
+                    side=signal,
+                    accepted=False,
+                    reason=reason,
+                )
+                strategy.discard_pending_trade()
+                continue
+
             order_kwargs = {
                 'symbol': symbol,
                 'quantity': quantity,
@@ -461,6 +584,31 @@ class TradingBot:
                 position = self.order_engine.market_short(**order_kwargs)
             if position is None:
                 strategy.discard_pending_trade()
+            else:
+                self.execution_tracker.record_signal(
+                    strategy_name=strategy.name,
+                    symbol=symbol,
+                    side=signal,
+                    accepted=True,
+                )
+                self.execution_tracker.record_order(
+                    order_id=position.id,
+                    symbol=symbol,
+                    side=signal,
+                    quantity=position.quantity,
+                    price=position.entry_price,
+                    status='FILLED',
+                )
+                self.execution_tracker.record_fill(
+                    fill_id=f"fill_{position.id}",
+                    order_id=position.id,
+                    symbol=symbol,
+                    side=signal,
+                    exec_price=position.entry_price,
+                    exec_qty=position.quantity,
+                    fee=position.fee_paid,
+                )
+                self.persistence.save_wallet_state(self.wallet)
             break  # one position per symbol
 
         self._update_dashboard_state(prices)
@@ -607,6 +755,7 @@ class TradingBot:
                 await update_task
             with suppress(asyncio.CancelledError):
                 await news_task
+            self.persistence.save_wallet_state(self.wallet)
             self._print_final_report()
 
     def _print_final_report(self):

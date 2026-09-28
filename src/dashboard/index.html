@@ -985,6 +985,132 @@
 
         .news-blocking-alert.active { display: flex; align-items: center; gap: 0.5rem; }
 
+        /* ─── Data Tables & Badges for AI Research & Monitoring ─── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            text-align: left;
+        }
+        .data-table th {
+            padding: 0.6rem 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table td {
+            padding: 0.65rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        .data-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .badge-candidate { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-promoted { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .badge-paper { background: var(--green-soft); color: var(--green); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-retired { background: rgba(255, 255, 255, 0.06); color: var(--text-muted); border: 1px solid var(--border); }
+        .badge-danger { background: var(--red-soft); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-warning { background: var(--amber-soft); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-success { background: var(--green-soft); color: var(--green); border: 1px solid rgba(34, 197, 94, 0.3); }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 0.55rem 1.1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-med);
+            border: 1px solid transparent;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(232, 69, 69, 0.3);
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .btn-success {
+            background: var(--green);
+            color: #fff;
+        }
+        .btn-success:hover { background: #16a34a; }
+        .btn-danger {
+            background: var(--red);
+            color: #fff;
+        }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+        .btn-emergency {
+            background: linear-gradient(135deg, #ef4444, #991b1b);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            padding: 0.85rem 1.75rem;
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: pulse-border 2s infinite;
+        }
+        .btn-emergency:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 25px rgba(239, 68, 68, 0.6);
+        }
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 22px rgba(239, 68, 68, 0.8); }
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--bg-card-solid);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
         /* ═══════════════════════════════════════════════════
            RESPONSIVE
            ═══════════════════════════════════════════════════ */
@@ -1057,6 +1183,7 @@
                 <span class="pulse-dot"></span>
                 Paper Trading
             </span>
+            <div id="sidebar-account-mode" style="margin-top: 6px; font-size: 0.65rem; font-weight: 700; color: #a855f7; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 999px; padding: 2px 8px; text-align: center; text-transform: uppercase; letter-spacing: 0.05em;">SIMULATED (VIRTUAL FUNDS)</div>
         </div>
 
         <!-- Timeframe Selector -->
@@ -1101,6 +1228,27 @@
             <div class="nav-item" data-view="trades">
                 <span class="nav-icon">💱</span> Trades
                 <span class="nav-badge" id="nav-trade-count">0</span>
+            </div>
+
+            <!-- Stage 6: AI Research & System Monitoring -->
+            <div style="padding: 0.75rem 1.25rem 0.25rem; font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">AI Lab & Operations</div>
+            <div class="nav-item" data-view="research">
+                <span class="nav-icon">🔬</span> AI Research
+            </div>
+            <div class="nav-item" data-view="comparison">
+                <span class="nav-icon">⚖️</span> Strategy Comparison
+            </div>
+            <div class="nav-item" data-view="backtesting">
+                <span class="nav-icon">🧪</span> Backtesting
+            </div>
+            <div class="nav-item" data-view="papertrading">
+                <span class="nav-icon">📝</span> Paper Trading
+            </div>
+            <div class="nav-item" data-view="monitoring">
+                <span class="nav-icon">📡</span> System Monitoring
+            </div>
+            <div class="nav-item" data-view="controls">
+                <span class="nav-icon">🛡️</span> Controls
             </div>
         </nav>
 
@@ -1378,7 +1526,482 @@
             </div>
         </section>
 
+        <!-- ─── 1. AI RESEARCH ─── -->
+        <section class="view-section" id="view-research">
+            <div class="section-header">
+                <h1>AI Research Lab</h1>
+                <div class="section-desc">Autonomous strategy discovery, experiment metrics, and AI recommendations</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Strategies</div>
+                    <div class="stat-value" id="res-total-strats">—</div>
+                    <div class="stat-sub" id="res-strat-breakdown">In registry</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Experiments</div>
+                    <div class="stat-value" id="res-total-exp">—</div>
+                    <div class="stat-sub">Across all batches</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Completed / Passed</div>
+                    <div class="stat-value positive" id="res-completed-exp">—</div>
+                    <div class="stat-sub">Validated against baseline</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Failed Experiments</div>
+                    <div class="stat-value negative" id="res-failed-exp">—</div>
+                    <div class="stat-sub">Did not beat baseline</div>
+                </div>
+            </div>
+
+            <div class="card-columns">
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">⚙️</span> Research Job Runner</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                        <div>
+                            <span style="font-size:0.75rem;color:var(--text-muted);">Current Status:</span>
+                            <span class="badge badge-candidate" id="res-job-badge">IDLE</span>
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);" id="res-job-time">—</div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="btn-run-research-job">🚀 Start Research Job</button>
+                        <button class="btn btn-secondary" id="btn-stop-research-job">⏹ Stop Job</button>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.75rem;">
+                        Autonomous research tests new indicator variants and generates OOS backtest reports.
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">💡</span> AI Research Recommendations</div>
+                    <div id="res-recommendations-container" style="max-height:220px;overflow-y:auto;">
+                        <div style="font-size:0.78rem;color:var(--text-muted);padding:1rem 0;text-align:center;">
+                            Loading AI recommendations...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-top:1.25rem;">
+                <div class="card-title"><span class="icon">🧬</span> New Strategy Candidates & Discovered Blueprints</div>
+                <div style="max-height:350px;overflow-y:auto;">
+                    <table class="data-table" id="res-candidates-table">
+                        <thead>
+                            <tr>
+                                <th>Strategy Name</th>
+                                <th>Version</th>
+                                <th>Type</th>
+                                <th>Timeframe</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="res-candidates-tbody">
+                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Loading candidates...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-top:1.25rem;">
+                <div class="card-title"><span class="icon">📋</span> Validation & Rejection Log (Reasons & Criteria)</div>
+                <div style="max-height:250px;overflow-y:auto;" id="res-reasons-container">
+                    <div style="font-size:0.78rem;color:var(--text-muted);padding:1rem 0;text-align:center;">
+                        Loading audit and validation reasons...
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 2. STRATEGY COMPARISON ─── -->
+        <section class="view-section" id="view-comparison">
+            <div class="section-header">
+                <h1>Strategy Comparison</h1>
+                <div class="section-desc">Active baseline vs candidate versions, out-of-sample validation, and audit history</div>
+            </div>
+
+            <div class="glass-card" style="margin-bottom:1.25rem;border-left:4px solid var(--accent-mid);">
+                <div class="card-title"><span class="icon">👑</span> Current Active Baseline Strategy</div>
+                <div id="comp-baseline-details" style="display:flex;flex-wrap:wrap;gap:2rem;align-items:center;">
+                    <div>
+                        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">Strategy</div>
+                        <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);" id="comp-base-name">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">Set At</div>
+                        <div style="font-size:0.85rem;color:var(--text-secondary);" id="comp-base-date">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">Previous Baseline</div>
+                        <div style="font-size:0.85rem;color:var(--text-muted);" id="comp-base-prev">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <div class="card-title"><span class="icon">⚖️</span> Candidate Version Performance & Degradation Check</div>
+                <div style="max-height:380px;overflow-y:auto;">
+                    <table class="data-table" id="comp-leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Strategy</th>
+                                <th>Grade</th>
+                                <th>Score</th>
+                                <th>Test Sharpe</th>
+                                <th>Test Return</th>
+                                <th>Max Drawdown</th>
+                                <th>Win Rate</th>
+                                <th>Trades</th>
+                                <th>Verdict</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comp-leaderboard-tbody">
+                            <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Loading leaderboard...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-top:1.25rem;">
+                <div class="card-title"><span class="icon">📜</span> Promotion Decision Audit Trail</div>
+                <div style="max-height:300px;overflow-y:auto;">
+                    <table class="data-table" id="comp-audit-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Strategy</th>
+                                <th>Action</th>
+                                <th>Status Change</th>
+                                <th>Reason</th>
+                                <th>Approved By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comp-audit-tbody">
+                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Loading audit trail...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 3. BACKTESTING LAB ─── -->
+        <section class="view-section" id="view-backtesting">
+            <div class="section-header">
+                <h1>Backtesting Lab</h1>
+                <div class="section-desc">Walk-forward validation parameters, performance reports, and paper trading divergence</div>
+            </div>
+
+            <div class="card-columns">
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">⚙️</span> Backtest Protocol & Parameters</div>
+                    <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:1rem;font-size:0.8rem;">
+                        <div><span style="color:var(--text-muted);">Historical Window:</span> <strong style="color:var(--text-primary);">90 Days</strong></div>
+                        <div><span style="color:var(--text-muted);">Walk-Forward Split:</span> <strong style="color:var(--text-primary);">70% Train / 30% Test</strong></div>
+                        <div><span style="color:var(--text-muted);">Execution Model:</span> <strong style="color:var(--text-primary);">Market Orders + Costs</strong></div>
+                        <div><span style="color:var(--text-muted);">Min Sharpe Threshold:</span> <strong style="color:var(--text-primary);">0.5</strong></div>
+                        <div><span style="color:var(--text-muted);">Slippage Simulation:</span> <strong style="color:var(--text-primary);">5 - 30 bps Volatility Scaled</strong></div>
+                        <div><span style="color:var(--text-muted);">Taker Fees:</span> <strong style="color:var(--text-primary);">0.10% Spot / 0.05% Futures</strong></div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">🔍</span> Paper vs Backtest Divergence Monitor</div>
+                    <div id="bt-divergence-content">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                            <span style="font-size:0.75rem;color:var(--text-muted);">Divergence Status:</span>
+                            <span class="badge badge-paper" id="bt-div-status">NORMAL</span>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.5;" id="bt-div-summary">
+                            Forward paper results are within statistical parameters of backtest expectations.
+                        </div>
+                        <div style="margin-top:0.75rem;display:flex;gap:1.5rem;font-size:0.75rem;">
+                            <div>Sharpe Diff: <strong id="bt-div-sharpe">—</strong></div>
+                            <div>Win Rate Diff: <strong id="bt-div-wr">—</strong></div>
+                            <div>DD Ratio: <strong id="bt-div-dd">—</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-top:1.25rem;">
+                <div class="card-title"><span class="icon">📑</span> Completed Experiment Reports</div>
+                <div style="max-height:350px;overflow-y:auto;">
+                    <table class="data-table" id="bt-reports-table">
+                        <thead>
+                            <tr>
+                                <th>Report ID</th>
+                                <th>Type</th>
+                                <th>Strategy</th>
+                                <th>Created</th>
+                                <th>Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bt-reports-tbody">
+                            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Loading reports...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 4. PAPER TRADING ─── -->
+        <section class="view-section" id="view-papertrading">
+            <div class="section-header">
+                <h1>Paper Trading Engine</h1>
+                <div class="section-desc">Live forward execution with virtual capital on real market feeds</div>
+            </div>
+
+            <!-- Simulated Account Banner -->
+            <div style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.3);border-radius:var(--radius-md);padding:0.9rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+                <div>
+                    <span class="badge" style="background:#a855f7;color:#fff;margin-right:8px;">SIMULATED ACCOUNT</span>
+                    <strong style="color:var(--text-primary);font-size:0.85rem;">Virtual Funds Mode</strong>
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">Real-time Binance WebSocket prices, simulated slippage and fees. Zero real capital at risk.</div>
+                </div>
+                <div class="badge badge-paper">ENGINE ACTIVE</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Virtual Cash</div>
+                    <div class="stat-value" id="pt-cash">$10,000.00</div>
+                    <div class="stat-sub">Available Buying Power</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Simulated Equity</div>
+                    <div class="stat-value" id="pt-equity">$10,000.00</div>
+                    <div class="stat-sub" id="pt-return-pct">+0.00% Return</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Peak Equity</div>
+                    <div class="stat-value" id="pt-peak">$10,000.00</div>
+                    <div class="stat-sub" id="pt-drawdown">0.00% Drawdown</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Simulated Fees Paid</div>
+                    <div class="stat-value" id="pt-fees">$0.00</div>
+                    <div class="stat-sub">Full Taker Fee Accounting</div>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-top:1.25rem;">
+                <div class="card-title"><span class="icon">⚡</span> Open Paper Positions</div>
+                <div id="pt-positions-container" style="max-height:250px;overflow-y:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Position ID</th>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th>Quantity</th>
+                                <th>Entry Price</th>
+                                <th>Mark Price</th>
+                                <th>Unrealized PnL</th>
+                                <th>Stop Loss</th>
+                                <th>Take Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pt-positions-tbody">
+                            <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No open paper positions</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-top:1.25rem;">
+                <div class="card-title"><span class="icon">💱</span> Recent Simulated Trades</div>
+                <div id="pt-trades-container" style="max-height:300px;overflow-y:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th>Strategy</th>
+                                <th>Qty</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Net PnL</th>
+                                <th>Fees</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pt-trades-tbody">
+                            <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No trades recorded yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 5. SYSTEM MONITORING ─── -->
+        <section class="view-section" id="view-monitoring">
+            <div class="section-header">
+                <h1>System Monitoring</h1>
+                <div class="section-desc">Real-time connectivity, data freshness, broker status, and risk alerts</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Market Feed</div>
+                    <div class="stat-value positive" id="mon-feed-status">ACTIVE</div>
+                    <div class="stat-sub" id="mon-feed-detail">Binance WebSocket</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Broker Adapter</div>
+                    <div class="stat-value" id="mon-broker-mode">PAPER</div>
+                    <div class="stat-sub">OrderEngine + Virtual Wallet</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Circuit Breaker</div>
+                    <div class="stat-value positive" id="mon-breaker-status">ARMED</div>
+                    <div class="stat-sub">Max 15% Drawdown Limit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Emergency Stop</div>
+                    <div class="stat-value positive" id="mon-emergency-status">DISARMED</div>
+                    <div class="stat-sub">Normal Execution State</div>
+                </div>
+            </div>
+
+            <div class="card-columns" style="margin-top:1.25rem;">
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">⏱</span> Market Feed Freshness & Stale Detector</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Status</th>
+                                <th>Elapsed</th>
+                                <th>Max Threshold</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mon-stale-tbody">
+                            <tr><td>BTCUSDT</td><td><span class="badge badge-paper">FRESH</span></td><td>&lt; 1s</td><td>120s</td></tr>
+                            <tr><td>ETHUSDT</td><td><span class="badge badge-paper">FRESH</span></td><td>&lt; 1s</td><td>120s</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">🛡️</span> Live Risk Guardian Boundaries</div>
+                    <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:1rem;font-size:0.78rem;">
+                        <div><span style="color:var(--text-muted);">Max Order Size:</span> <strong id="mon-max-order">$500.00</strong></div>
+                        <div><span style="color:var(--text-muted);">Daily Loss Limit:</span> <strong id="mon-daily-loss-lim">$200.00 / 24h</strong></div>
+                        <div><span style="color:var(--text-muted);">Max Exposure:</span> <strong id="mon-max-exp">50% Equity</strong></div>
+                        <div><span style="color:var(--text-muted);">Max Positions:</span> <strong id="mon-max-pos">2 Concurrent</strong></div>
+                        <div><span style="color:var(--text-muted);">Leverage Cap:</span> <strong style="color:var(--green);">1.0x (Spot Margin Strict)</strong></div>
+                        <div><span style="color:var(--text-muted);">AI Boundary:</span> <strong style="color:var(--green);">Immutable by AI</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-top:1.25rem;">
+                <div class="card-title"><span class="icon">📢</span> System Events & Notifications Log</div>
+                <div style="max-height:280px;overflow-y:auto;">
+                    <table class="data-table" id="mon-events-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Event Type</th>
+                                <th>Severity</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mon-events-tbody">
+                            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Loading system events...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 6. CONTROLS ─── -->
+        <section class="view-section" id="view-controls">
+            <div class="section-header">
+                <h1>Safety & Controls</h1>
+                <div class="section-desc">Manage strategy approval gates, execution state, and emergency procedures</div>
+            </div>
+
+            <!-- Emergency Stop Block -->
+            <div class="glass-card" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.05);margin-bottom:1.5rem;">
+                <div class="card-title" style="color:var(--red);"><span class="icon">🚨</span> Global Emergency Stop Control</div>
+                <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.5;">
+                    Activating the emergency stop will instantly halt all trading routines, reject incoming strategy signals, cancel any active orders, and liquidate all open positions.
+                </p>
+                <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+                    <button class="btn btn-emergency" id="btn-trigger-emergency">🚨 TRIGGER EMERGENCY STOP</button>
+                    <div style="font-size:0.8rem;">
+                        Status: <span class="badge badge-success" id="ctrl-emergency-status">NORMAL</span>
+                    </div>
+                </div>
+
+                <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                    <span style="font-size:0.75rem;color:var(--text-muted);">Emergency Reset Token:</span>
+                    <input type="password" id="ctrl-reset-token-input" placeholder="Enter reset token" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:#fff;padding:0.4rem 0.8rem;font-size:0.8rem;">
+                    <button class="btn btn-secondary" id="btn-reset-emergency">Reset Emergency Stop</button>
+                </div>
+            </div>
+
+            <div class="card-columns">
+                <!-- Paper Trading State -->
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">⏯</span> Paper Trading Engine Loop</div>
+                    <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.5;">
+                        Pause or resume the market feed processing loop without resetting position state.
+                    </p>
+                    <div style="display:flex;gap:0.75rem;">
+                        <button class="btn btn-danger" id="btn-ctrl-stop-trading">⏸ Stop Paper Trading</button>
+                        <button class="btn btn-success" id="btn-ctrl-resume-trading">▶ Resume Paper Trading</button>
+                    </div>
+                </div>
+
+                <!-- Research Job Launcher -->
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">🔬</span> AI Research Job Control</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                        <div>
+                            <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:4px;">Max Candidates</label>
+                            <input type="number" id="ctrl-max-candidates" value="3" min="1" max="10" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:#fff;padding:0.4rem;font-size:0.8rem;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem;color:var(--text-muted);display:block;margin-bottom:4px;">Max Runtime (sec)</label>
+                            <input type="number" id="ctrl-max-runtime" value="300" min="60" max="1800" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:#fff;padding:0.4rem;font-size:0.8rem;">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;">
+                        <button class="btn btn-primary" id="btn-ctrl-run-job">Launch Research Run</button>
+                        <button class="btn btn-secondary" id="btn-ctrl-stop-job">Halt Job</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strategy Approval Gate Panel -->
+            <div class="glass-card" style="margin-top:1.25rem;">
+                <div class="card-title"><span class="icon">✋</span> Human Approval Gate — Strategies Pending Paper Trading</div>
+                <div id="ctrl-pending-container" style="max-height:300px;overflow-y:auto;">
+                    <div style="font-size:0.8rem;color:var(--text-muted);padding:1.5rem 0;text-align:center;">
+                        Checking for strategies awaiting human approval...
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
+
+    <!-- Confirmation Modal Overlay -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal-card">
+            <h2 id="modal-title" style="font-size:1.1rem;margin-bottom:0.75rem;">Confirm Action</h2>
+            <p id="modal-body" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.5rem;line-height:1.5;"></p>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+                <button class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+                <button class="btn btn-danger" id="modal-confirm-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Timeframe Change Toast -->
     <div class="tf-toast" id="tf-toast">
