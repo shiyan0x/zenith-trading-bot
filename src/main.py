@@ -153,6 +153,19 @@ class TradingBot:
             wallet=self.wallet,
         )
 
+        try:
+            from src.dashboard.timeframe_api import init_timeframe_api
+            init_timeframe_api(
+                tracker=self.execution_tracker,
+                wallet=self.wallet,
+                market_feed=self.market_feed,
+                fee_model=self.fee_model,
+                config=self.config,
+                on_timeframe_change=self._handle_timeframe_change,
+            )
+        except ImportError as e:
+            logger.debug(f"[INIT] Timeframe API not initialized: {e}")
+
         # ─── News & Sentiment ───
         self.news_feed = NewsFeed(config)
         self.sentiment = SentimentAnalyzer(config)
@@ -177,6 +190,35 @@ class TradingBot:
                  strat_cfg.get('mean_reversion', {}))
             )
 
+        # ─── Chart Pattern Recognition & Learning ───
+        self.pattern_cfg = config.get('chart_patterns', {})
+        self.patterns_enabled = self.pattern_cfg.get('enabled', True)
+        if self.patterns_enabled:
+            try:
+                from src.patterns.pattern_detector import PatternDetector
+                from src.patterns.context_analyzer import MarketContextAnalyzer
+                from src.patterns.outcome_evaluator import PatternOutcomeEvaluator
+                self.pattern_detector = PatternDetector(
+                    min_confidence=self.pattern_cfg.get('min_confidence', 0.60),
+                    swing_left=self.pattern_cfg.get('swing_left_bars', 3),
+                    swing_right=self.pattern_cfg.get('swing_right_bars', 2),
+                )
+                self.pattern_context_analyzer = MarketContextAnalyzer()
+                self.pattern_outcome_evaluator = PatternOutcomeEvaluator()
+                logger.info("[INIT] Chart Pattern Recognition & Context Analyzer initialized")
+            except Exception as e:
+                logger.warning(f"[INIT] Pattern system not initialized: {e}")
+                self.pattern_detector = None
+                self.pattern_context_analyzer = None
+                self.pattern_outcome_evaluator = None
+        else:
+            self.pattern_detector = None
+            self.pattern_context_analyzer = None
+            self.pattern_outcome_evaluator = None
+
+        self._candle_history = {symbol: [] for symbol in config['symbols']}
+        self._detected_patterns = {symbol: [] for symbol in config['symbols']}
+
         # ─── Dashboard State (shared dict) ───
         self.bot_state = {
             'wallet': {},
@@ -189,6 +231,7 @@ class TradingBot:
             'timeframe': config.get('timeframe', '1m'),
             'news': [],
             'sentiment': {},
+            'patterns': [],
         }
 
         # ─── Timeframe switching ───
@@ -217,6 +260,13 @@ class TradingBot:
             current_status = 'stopped'
         else:
             current_status = self.bot_state.get('status', 'initializing')
+
+        all_patterns = [
+            p.to_dict() if hasattr(p, 'to_dict') else p
+            for p_list in self._detected_patterns.values()
+            for p in p_list
+        ]
+
         self.bot_state.update({
             'wallet': self.wallet.to_dict(prices),
             'risk': self.risk_manager.get_status(),
@@ -227,6 +277,7 @@ class TradingBot:
             'timeframe': self.config.get('timeframe', '1m'),
             'news': self.news_feed.get_news_dicts(),
             'sentiment': self.sentiment.get_summary(),
+            'patterns': all_patterns,
         })
 
     def _handle_timeframe_change(self, new_tf: str):
@@ -240,6 +291,25 @@ class TradingBot:
         self.bot_state['timeframe'] = new_tf
         self._pending_timeframe = new_tf
         self._pending_revalidation = True
+
+        # Persist selected timeframe to config/settings.json
+        try:
+            config_path = os.path.join(PROJECT_ROOT, 'config', 'settings.json')
+            with open(config_path, 'r', encoding='utf-8') as f:
+                saved_cfg = json.load(f)
+            saved_cfg['timeframe'] = new_tf
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(saved_cfg, f, indent=4)
+            logger.info(f"[BOT] Persisted selected timeframe '{new_tf}' to settings.json")
+        except Exception as e:
+            logger.error(f"[BOT] Could not persist timeframe to settings.json: {e}")
+
+        self.execution_tracker.record_risk_event(
+            event_type='TIMEFRAME_CHANGE',
+            details=f"Timeframe switched from {old_tf} to {new_tf}. Any active positions closed cleanly.",
+            severity='INFO',
+            timeframe=new_tf,
+        )
 
         # A stop/target calculated for one interval is not valid on another.
         # Close first, then clear signal state before reconnecting.
@@ -419,6 +489,39 @@ class TradingBot:
 
         logger.debug(f"[CANDLE] {candle}")
 
+        # Update historical candle buffer for multi-bar pattern scanning
+        buf = self._candle_history.setdefault(symbol, [])
+        buf.append(candle)
+        if len(buf) > 300:
+            self._candle_history[symbol] = buf[-300:]
+
+        # Run chart pattern recognition on closed candles
+        if self.pattern_detector and len(self._candle_history[symbol]) >= 10:
+            try:
+                tf = self.config.get('timeframe', '15m')
+                detected = self.pattern_detector.detect_all(
+                    self._candle_history[symbol],
+                    symbol=symbol,
+                    timeframe=tf
+                )
+                if self.pattern_context_analyzer:
+                    for p in detected:
+                        p.context = self.pattern_context_analyzer.analyze(
+                            self._candle_history[symbol],
+                            idx=len(self._candle_history[symbol]) - 1,
+                            symbol=symbol,
+                            timeframe=tf,
+                        )
+                self._detected_patterns[symbol] = detected
+                all_pats = [p for sym_list in self._detected_patterns.values() for p in sym_list]
+                try:
+                    from src.dashboard.pattern_api import update_active_patterns
+                    update_active_patterns(all_pats)
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.debug(f"[PATTERNS] Error scanning patterns on {symbol}: {e}")
+
         strategies = self.active_strategies.get(symbol, [])
         for strategy in strategies:
             strategy.update(candle)
@@ -474,6 +577,23 @@ class TradingBot:
                         exec_price=trade.get('exit_price', candle.close),
                         exec_qty=trade.get('quantity', pos.quantity),
                         fee=trade.get('total_fees', 0.0),
+                        timeframe=pos.timeframe or self.config.get('timeframe', '15m'),
+                    )
+                    self.execution_tracker.record_trade(
+                        symbol=symbol,
+                        timeframe=pos.timeframe or self.config.get('timeframe', '15m'),
+                        strategy_name=pos.strategy_name,
+                        entry_time=pos.timestamp,
+                        exit_time=time.time(),
+                        entry_price=pos.entry_price,
+                        exit_price=trade.get('exit_price', candle.close),
+                        quantity=pos.quantity,
+                        gross_pnl=trade.get('gross_pnl', 0.0),
+                        fees=trade.get('total_fees', 0.0),
+                        net_pnl=trade.get('net_pnl', 0.0),
+                        outcome=trade.get('outcome', 'flat'),
+                        exit_reason='strategy_exit',
+                        mode='live' if (self.live_auth and self.live_auth.is_live_enabled) else 'paper',
                     )
                     self.persistence.save_wallet_state(self.wallet)
                 owner.discard_pending_trade()
@@ -505,6 +625,22 @@ class TradingBot:
                 )
                 strategy.discard_pending_trade()
                 break
+
+            # Chart Pattern Confluence Filter (Phase 7)
+            if self.pattern_cfg.get('require_context_alignment', False):
+                opposing_direction = 'BEARISH' if signal == 'long' else 'BULLISH'
+                active_opposing = [
+                    p for p in self._detected_patterns.get(symbol, [])
+                    if (hasattr(p.status, 'value') and p.status.value == 'CONFIRMED')
+                    and (hasattr(p.direction, 'value') and p.direction.value == opposing_direction)
+                ]
+                if active_opposing:
+                    opp_names = ", ".join(p.pattern_name for p in active_opposing)
+                    logger.info(
+                        f"[BOT] Entry BLOCKED by opposing confirmed pattern ({opp_names}) on {symbol}"
+                    )
+                    strategy.discard_pending_trade()
+                    continue
 
             plan = strategy.get_trade_plan()
             if not plan or plan.get('stop_loss') is None:
@@ -556,6 +692,7 @@ class TradingBot:
                 equity=self.wallet.total_equity(prices),
                 open_positions=list(self.wallet.positions.values()),
             )
+            current_tf = self.config.get('timeframe', '15m')
             if not is_safe:
                 logger.warning(f"[BOT] Order blocked by Risk Guardian: {reason}")
                 self.execution_tracker.record_signal(
@@ -564,6 +701,7 @@ class TradingBot:
                     side=signal,
                     accepted=False,
                     reason=reason,
+                    timeframe=current_tf,
                 )
                 strategy.discard_pending_trade()
                 continue
@@ -577,6 +715,7 @@ class TradingBot:
                 'strategy_name': strategy.name,
                 'stop_loss': plan['stop_loss'],
                 'take_profit': plan.get('take_profit'),
+                'timeframe': current_tf,
             }
             if signal == 'long':
                 position = self.order_engine.market_buy(**order_kwargs)
@@ -590,6 +729,7 @@ class TradingBot:
                     symbol=symbol,
                     side=signal,
                     accepted=True,
+                    timeframe=current_tf,
                 )
                 self.execution_tracker.record_order(
                     order_id=position.id,
@@ -598,6 +738,7 @@ class TradingBot:
                     quantity=position.quantity,
                     price=position.entry_price,
                     status='FILLED',
+                    timeframe=current_tf,
                 )
                 self.execution_tracker.record_fill(
                     fill_id=f"fill_{position.id}",
@@ -607,6 +748,7 @@ class TradingBot:
                     exec_price=position.entry_price,
                     exec_qty=position.quantity,
                     fee=position.fee_paid,
+                    timeframe=current_tf,
                 )
                 self.persistence.save_wallet_state(self.wallet)
             break  # one position per symbol

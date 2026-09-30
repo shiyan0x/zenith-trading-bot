@@ -100,6 +100,18 @@
         "max_headlines": 20,
         "note": "Free RSS feeds from CoinDesk, CoinTelegraph, Decrypt. No API keys needed."
     },
+    "chart_patterns": {
+        "enabled": true,
+        "min_confidence": 0.60,
+        "swing_left_bars": 3,
+        "swing_right_bars": 2,
+        "confluence_threshold": 0.20,
+        "require_context_alignment": true,
+        "max_signal_age_bars": 3,
+        "paper_signals_enabled": true,
+        "cv_enabled": false,
+        "note": "Deterministic geometric and candlestick pattern recognition with multi-factor market context."
+    },
     "dashboard": {
         "host": "127.0.0.1",
         "port": 5000

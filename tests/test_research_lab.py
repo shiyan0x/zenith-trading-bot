@@ -149,7 +149,7 @@ def test_blueprint_validation_rejects_missing_exit():
 
 def test_approved_indicators_whitelist():
     """Only known indicator types are in the whitelist."""
-    expected = {"ema", "sma", "rsi", "bollinger_bands", "atr", "adx", "vwap", "macd", "obv"}
+    expected = {"ema", "sma", "rsi", "bollinger_bands", "atr", "adx", "vwap", "macd", "obv", "pattern"}
     assert set(APPROVED_INDICATORS.keys()) == expected
 
 

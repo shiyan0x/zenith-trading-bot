@@ -42,7 +42,8 @@ class OrderEngine:
                    order_size_ratio: float = 0.01,
                    strategy_name: str = '',
                    stop_loss: float | None = None,
-                   take_profit: float | None = None) -> Optional[Position]:
+                   take_profit: float | None = None,
+                   timeframe: str = '') -> Optional[Position]:
         """
         Execute a market buy order.
 
@@ -80,6 +81,7 @@ class OrderEngine:
             strategy_name=strategy_name,
             stop_loss=stop_loss,
             take_profit=take_profit,
+            timeframe=timeframe,
         )
 
         return position
@@ -90,7 +92,8 @@ class OrderEngine:
                      order_size_ratio: float = 0.01,
                      strategy_name: str = '',
                      stop_loss: float | None = None,
-                     take_profit: float | None = None) -> Optional[Position]:
+                     take_profit: float | None = None,
+                     timeframe: str = '') -> Optional[Position]:
         """Open a 1x paper-futures short position."""
         costs = self.fee_model.total_cost(
             price=current_price,
@@ -113,6 +116,7 @@ class OrderEngine:
             strategy_name=strategy_name,
             stop_loss=stop_loss,
             take_profit=take_profit,
+            timeframe=timeframe,
         )
 
     def close_position(self, symbol: str, position_id: str,

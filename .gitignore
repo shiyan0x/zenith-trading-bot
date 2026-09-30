@@ -6,6 +6,7 @@ __pycache__/
 dist/
 build/
 *.egg
+.pytest_cache/
 
 # Databases & Runtime data
 *.db
@@ -17,6 +18,8 @@ data/history/*
 !data/history/.gitkeep
 data/reports/*
 !data/reports/.gitkeep
+data/state/*
+!data/state/.gitkeep
 
 # IDE
 .vscode/

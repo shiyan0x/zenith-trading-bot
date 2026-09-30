@@ -114,6 +114,8 @@ function renderView(view, state) {
         case 'papertrading': renderPaperTrading(state); break;
         case 'monitoring': renderMonitoring(state); break;
         case 'controls': renderControls(state); break;
+        case 'tfcompare': renderTimeframeComparison(state); break;
+        case 'patterns': renderPatterns(state); break;
     }
 }
 
@@ -955,29 +957,112 @@ document.addEventListener('DOMContentLoaded', () => {
     initTimeframeSelector();
     initModalListeners();
     initControlsEvents();
+    initTimeframeComparisonEvents();
     fetchDashboardToken();
 });
 
 // ═══════════════════════════════════════════════════
-// TIMEFRAME SELECTOR
+// TIMEFRAME SELECTOR & CONFIRMATION MODAL
 // ═══════════════════════════════════════════════════
+let pendingModalConfirmCallback = null;
+
+function showConfirmModal(title, message, confirmText = 'Confirm', confirmClass = 'btn-danger', onConfirm = null) {
+    if (typeof confirmText === 'function') {
+        onConfirm = confirmText;
+        confirmText = 'Confirm';
+        confirmClass = 'btn-danger';
+    } else if (typeof confirmClass === 'function') {
+        onConfirm = confirmClass;
+        confirmClass = 'btn-danger';
+    }
+
+    const modal = document.getElementById('confirm-modal');
+    const titleEl = document.getElementById('modal-title');
+    const bodyEl = document.getElementById('modal-body');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    if (!modal || !titleEl || !bodyEl) return;
+
+    titleEl.textContent = title;
+    bodyEl.innerHTML = message;
+
+    if (confirmBtn) {
+        confirmBtn.textContent = confirmText;
+        confirmBtn.className = `btn ${confirmClass}`;
+    }
+
+    pendingModalConfirmCallback = onConfirm;
+    modal.classList.add('active');
+}
+
+function hideConfirmModal() {
+    const modal = document.getElementById('confirm-modal');
+    if (modal) modal.classList.remove('active');
+    pendingModalConfirmCallback = null;
+}
+
+function initModalListeners() {
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideConfirmModal);
+    }
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+            const cb = pendingModalConfirmCallback;
+            hideConfirmModal();
+            if (typeof cb === 'function') {
+                cb();
+            }
+        });
+    }
+}
+
 function initTimeframeSelector() {
     const pills = document.querySelectorAll('.tf-pill');
     pills.forEach(pill => {
         pill.addEventListener('click', () => {
             const tf = pill.dataset.tf;
             const currentActive = document.querySelector('.tf-pill.active');
-            if (currentActive && currentActive.dataset.tf === tf) return; // already active
+            const currentTf = currentActive ? currentActive.dataset.tf : '15m';
+            if (currentTf === tf) return; // already active
 
-            // Optimistic UI update
-            pills.forEach(p => p.classList.remove('active'));
-            pill.classList.add('active');
+            const openPositions = (lastState && lastState.wallet && lastState.wallet.positions) || [];
+            const posCount = openPositions.length;
 
-            // Show toast
-            showToast(`Switching to ${tf} timeframe...`);
+            const isAggregated = (tf === '10m');
+            const typeDesc = isAggregated ? 'Aggregated Bar (2 × 5m native candles)' : 'Native Binance Kline';
 
-            // Send to server
-            socket.emit('change_timeframe', { timeframe: tf });
+            let warnText = `You are switching active trading timeframe from <strong>${escapeHtml(currentTf)}</strong> to <strong>${escapeHtml(tf)}</strong> (${typeDesc}).<br><br>`;
+            if (posCount > 0) {
+                warnText += `<div style="background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.3); border-radius:4px; padding:8px; margin-bottom:10px; color:#fca5a5;">
+                    ⚠️ <strong>Open Positions Warning:</strong> You currently have ${posCount} open paper position(s).<br>
+                    To prevent cross-timeframe signal contamination, open positions will be closed cleanly at the current market price upon switching.
+                </div>`;
+            } else {
+                warnText += `No open positions will be affected.<br>`;
+            }
+            warnText += `• Indicator buffers and strategy state will reset for the new interval.<br>
+• Complete historical trade logs and PnL will be preserved.<br>
+• The selection will be persisted to <code>settings.json</code>.`;
+
+            showConfirmModal(
+                `Switch Timeframe to ${tf}?`,
+                warnText,
+                'Confirm & Switch',
+                'btn-primary',
+                () => {
+                    pills.forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+
+                    const badge = document.getElementById('active-tf-badge');
+                    if (badge) {
+                        badge.textContent = `${tf}${isAggregated ? ' (Aggregated)' : ''}`;
+                    }
+
+                    showToast(`Switching to ${tf} timeframe...`);
+                    socket.emit('change_timeframe', { timeframe: tf });
+                }
+            );
         });
     });
 }
@@ -988,6 +1073,10 @@ function syncTimeframePill(state) {
     document.querySelectorAll('.tf-pill').forEach(p => {
         p.classList.toggle('active', p.dataset.tf === tf);
     });
+    const badge = document.getElementById('active-tf-badge');
+    if (badge) {
+        badge.textContent = `${tf}${tf === '10m' ? ' (Aggregated)' : ''}`;
+    }
 }
 
 let toastTimer = null;
@@ -1789,3 +1878,423 @@ function initControlsEvents() {
     if (stopJobBtn1) stopJobBtn1.addEventListener('click', triggerStopResearch);
     if (stopJobBtn2) stopJobBtn2.addEventListener('click', triggerStopResearch);
 }
+
+// ═══════════════════════════════════════════════════
+// MULTI-TIMEFRAME PERFORMANCE COMPARISON (STEPS 5 & 6)
+// ═══════════════════════════════════════════════════
+
+function initTimeframeComparisonEvents() {
+    const filters = ['tf-filter-date', 'tf-filter-symbol', 'tf-filter-strategy', 'tf-filter-mode'];
+    filters.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => fetchTimeframeComparisonData());
+        }
+    });
+
+    const refreshBtn = document.getElementById('btn-refresh-tf-compare');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => fetchTimeframeComparisonData());
+    }
+
+    const runEvalBtn = document.getElementById('btn-run-tf-evaluation');
+    if (runEvalBtn) {
+        runEvalBtn.addEventListener('click', runControlledTfEvaluation);
+    }
+}
+
+async function renderTimeframeComparison(state) {
+    await fetchTimeframeComparisonData();
+}
+
+async function fetchTimeframeComparisonData() {
+    const tbody = document.getElementById('tf-comparison-tbody');
+    if (!tbody) return;
+
+    const dateVal = document.getElementById('tf-filter-date')?.value || 'all';
+    const symbolVal = document.getElementById('tf-filter-symbol')?.value || 'all';
+    const strategyVal = document.getElementById('tf-filter-strategy')?.value || 'all';
+    const modeVal = document.getElementById('tf-filter-mode')?.value || 'all';
+
+    const params = new URLSearchParams();
+    if (symbolVal !== 'all') params.append('symbol', symbolVal);
+    if (strategyVal !== 'all') params.append('strategy', strategyVal);
+    if (modeVal !== 'all') params.append('mode', modeVal);
+
+    if (dateVal === '7d' || dateVal === '30d' || dateVal === '90d') {
+        const days = parseInt(dateVal.replace('d', ''), 10);
+        const startDate = new Date(Date.now() - days * 86400000).toISOString();
+        params.append('start_date', startDate);
+    }
+
+    try {
+        const res = await fetch(`/api/timeframe/comparison?${params.toString()}`);
+        if (!res.ok) {
+            tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#ef4444;padding:1rem;">Failed to fetch comparison data</td></tr>`;
+            return;
+        }
+
+        const data = await res.json();
+        renderTfComparisonTable(data.timeframes || []);
+        renderTfComparisonBars(data.timeframes || []);
+
+        const noticeEl = document.getElementById('tf-comparability-text');
+        if (noticeEl && data.comparability_notice) {
+            noticeEl.textContent = data.comparability_notice;
+        }
+    } catch (e) {
+        console.error('[Dashboard] Error fetching timeframe comparison:', e);
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#ef4444;padding:1rem;">Error: ${escapeHtml(e.message)}</td></tr>`;
+    }
+}
+
+function renderTfComparisonTable(rows) {
+    const tbody = document.getElementById('tf-comparison-tbody');
+    if (!tbody) return;
+
+    if (!rows || rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No timeframe metrics recorded yet.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = rows.map(r => {
+        const isInsufficient = (r.status === 'insufficient_data');
+        const pnlCls = r.net_pnl > 0 ? 'positive' : (r.net_pnl < 0 ? 'negative' : 'neutral');
+        const pfStr = (r.profit_factor >= 999 || r.profit_factor === Infinity) ? '∞' : r.profit_factor.toFixed(2);
+        const tfLabel = r.timeframe + (r.type === 'aggregated' ? '*' : '');
+        const typeBadge = r.type === 'native'
+            ? `<span style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(59,130,246,0.15);color:#60a5fa;">Native</span>`
+            : `<span style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(168,85,247,0.15);color:#c084fc;" title="Aggregated from 2 × 5m bars">Aggregated (5m)</span>`;
+
+        if (isInsufficient) {
+            return `<tr>
+                <td class="mono font-bold">${escapeHtml(tfLabel)}</td>
+                <td>${typeBadge}</td>
+                <td><span style="background:rgba(100,116,139,0.2);padding:2px 6px;border-radius:4px;font-size:0.75rem;">${r.sample_size} trades</span></td>
+                <td colspan="8" style="color:var(--text-muted);font-style:italic;padding-left:1rem;">
+                    Not enough data (${r.sample_size} / ${r.min_required_trades} trades required for statistical validity)
+                </td>
+                <td>${r.data_gaps_and_errors}</td>
+                <td><span style="font-size:0.7rem;color:var(--text-muted);background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px;">Pending Data</span></td>
+            </tr>`;
+        }
+
+        return `<tr>
+            <td class="mono font-bold">${escapeHtml(tfLabel)}</td>
+            <td>${typeBadge}</td>
+            <td><strong>${r.total_trades}</strong> <span style="font-size:0.7rem;color:var(--text-muted);">(${r.date_range})</span></td>
+            <td class="mono font-bold ${r.win_rate >= 50 ? 'positive' : 'negative'}">${r.win_rate.toFixed(1)}%</td>
+            <td class="mono">${r.winning_trades} / ${r.losing_trades}</td>
+            <td class="mono">${formatUSD(r.gross_pnl)}</td>
+            <td class="mono">${formatUSD(r.fees_paid)}</td>
+            <td class="mono font-bold ${pnlCls}">${formatPnL(r.net_pnl)}</td>
+            <td class="mono ${pnlCls}">${formatPnL(r.avg_net_pnl)}</td>
+            <td class="mono negative">${r.max_drawdown_pct.toFixed(1)}%</td>
+            <td class="mono ${r.profit_factor >= 1.0 ? 'positive' : 'negative'}">${pfStr}</td>
+            <td>${r.data_gaps_and_errors} <span style="font-size:0.65rem;color:var(--text-muted);">(${r.uptime_pct.toFixed(0)}% uptime)</span></td>
+            <td><span style="font-size:0.7rem;color:#10b981;background:rgba(16,185,129,0.12);padding:2px 6px;border-radius:4px;font-weight:600;">Active</span></td>
+        </tr>`;
+    }).join('');
+}
+
+function renderTfComparisonBars(rows) {
+    const pnlContainer = document.getElementById('tf-pnl-bars');
+    const winContainer = document.getElementById('tf-winrate-bars');
+    if (!pnlContainer || !winContainer) return;
+
+    if (!rows || rows.length === 0) {
+        pnlContainer.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">No data</div>';
+        winContainer.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">No data</div>';
+        return;
+    }
+
+    const maxPnl = Math.max(...rows.map(r => Math.abs(r.net_pnl || 0)), 10.0);
+
+    pnlContainer.innerHTML = rows.map(r => {
+        const pnl = r.net_pnl || 0;
+        const isNeg = pnl < 0;
+        const widthPct = Math.min(100, Math.round((Math.abs(pnl) / maxPnl) * 100));
+        const color = isNeg ? '#ef4444' : (pnl > 0 ? '#10b981' : '#64748b');
+        const label = r.status === 'insufficient_data' ? 'Not enough data' : formatPnL(pnl);
+
+        return `<div>
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:3px;">
+                <span class="mono font-bold">${r.timeframe}</span>
+                <span class="mono" style="color:${color};font-weight:600;">${label}</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.06);height:8px;border-radius:4px;overflow:hidden;">
+                <div style="background:${color};height:100%;width:${widthPct}%;transition:width 0.3s ease;"></div>
+            </div>
+        </div>`;
+    }).join('');
+
+    winContainer.innerHTML = rows.map(r => {
+        const winRate = r.win_rate || 0;
+        const color = winRate >= 50 ? '#10b981' : (winRate > 0 ? '#f59e0b' : '#64748b');
+        const label = r.status === 'insufficient_data' ? 'Not enough data' : `${winRate.toFixed(1)}% (${r.total_trades} trades)`;
+
+        return `<div>
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:3px;">
+                <span class="mono font-bold">${r.timeframe}</span>
+                <span class="mono" style="color:${color};font-weight:600;">${label}</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.06);height:8px;border-radius:4px;overflow:hidden;">
+                <div style="background:${color};height:100%;width:${winRate}%;transition:width 0.3s ease;"></div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function runControlledTfEvaluation() {
+    const symbol = document.getElementById('tf-eval-symbol')?.value || 'BTCUSDT';
+    const strategy = document.getElementById('tf-eval-strategy')?.value || 'ema_vwap_rsi';
+    const days = parseInt(document.getElementById('tf-eval-days')?.value || '30', 10);
+
+    const statusEl = document.getElementById('tf-eval-status');
+    const resultsContainer = document.getElementById('tf-eval-results-container');
+    const tbody = document.getElementById('tf-eval-tbody');
+    const btn = document.getElementById('btn-run-tf-evaluation');
+
+    if (!statusEl || !resultsContainer || !tbody || !btn) return;
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Evaluating...';
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'rgba(59, 130, 246, 0.15)';
+    statusEl.style.color = '#93c5fd';
+    statusEl.innerHTML = `<strong>Running isolated evaluations for ${escapeHtml(symbol)} (${escapeHtml(strategy)}) across 5m, 10m, 15m, 1h, and 4h...</strong><br>
+        <span style="font-size:0.75rem;color:var(--text-muted);">Fetching historical candles from Binance, simulating realistic fees and slippage, and performing 70/30 walk-forward testing. Please wait.</span>`;
+
+    resultsContainer.style.display = 'none';
+
+    try {
+        const res = await fetch('/api/timeframe/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol, strategy, days, timeframes: ['5m', '10m', '15m', '1h', '4h'] })
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.status === 'ERROR') {
+            throw new Error(data.message || 'Evaluation failed');
+        }
+
+        const rows = data.timeframes || [];
+        statusEl.style.background = 'rgba(16, 185, 129, 0.15)';
+        statusEl.style.color = '#6ee7b7';
+        const bestBanner = data.best_timeframe
+            ? ` | Highest test Sharpe: <strong>${data.best_timeframe}</strong>`
+            : ' | No timeframe passed all test criteria';
+        statusEl.innerHTML = `✅ <strong>Evaluation Complete for ${escapeHtml(symbol)} (${days} days)</strong>${bestBanner}`;
+
+        tbody.innerHTML = rows.map(r => {
+            const hasError = r.status === 'error';
+            if (hasError) {
+                return `<tr>
+                    <td class="mono font-bold">${escapeHtml(r.timeframe)}</td>
+                    <td><span style="color:#ef4444;font-size:0.75rem;">Error</span></td>
+                    <td colspan="6" style="color:var(--text-muted);">${escapeHtml(r.error || 'Failed')}</td>
+                    <td><span style="color:#ef4444;font-size:0.75rem;">FAILED</span></td>
+                </tr>`;
+            }
+
+            const pnlCls = r.total_return_pct > 0 ? 'positive' : (r.total_return_pct < 0 ? 'negative' : 'neutral');
+            const passedBadge = r.passed
+                ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;padding:2px 6px;border-radius:4px;font-weight:700;font-size:0.75rem;">PASSED</span>`
+                : `<span style="background:rgba(239,68,68,0.2);color:#f87171;padding:2px 6px;border-radius:4px;font-weight:700;font-size:0.75rem;">FAILED</span>`;
+
+            return `<tr>
+                <td class="mono font-bold">${escapeHtml(r.timeframe)}</td>
+                <td><span style="color:#10b981;font-size:0.75rem;">Completed</span></td>
+                <td class="mono">${r.total_trades}</td>
+                <td class="mono">${r.win_rate}%</td>
+                <td class="mono font-bold ${pnlCls}">${r.total_return_pct > 0 ? '+' : ''}${r.total_return_pct}%</td>
+                <td class="mono negative">${r.max_drawdown_pct}%</td>
+                <td class="mono font-bold ${r.sharpe_ratio >= 1.0 ? 'positive' : 'negative'}">${r.sharpe_ratio}</td>
+                <td class="mono">${r.profit_factor}</td>
+                <td>${passedBadge}</td>
+            </tr>`;
+        }).join('');
+
+        resultsContainer.style.display = 'block';
+    } catch (e) {
+        console.error('[Dashboard] Error in controlled evaluation:', e);
+        statusEl.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusEl.style.color = '#fca5a5';
+        statusEl.innerHTML = `❌ <strong>Evaluation Error:</strong> ${escapeHtml(e.message)}`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 Run Controlled Evaluation';
+    }
+}
+
+// ═══════════════════════════════════════════════════
+// CHART PATTERNS — Detection, Confluence & Outcomes
+// ═══════════════════════════════════════════════════
+let patternsListenersInitialized = false;
+
+function initPatternsListeners() {
+    if (patternsListenersInitialized) return;
+    patternsListenersInitialized = true;
+
+    const btnRefresh = document.getElementById('btn-refresh-patterns');
+    if (btnRefresh) {
+        btnRefresh.addEventListener('click', () => {
+            renderPatterns(lastState);
+        });
+    }
+
+    const filters = ['patterns-filter-symbol', 'patterns-filter-category', 'patterns-filter-status'];
+    filters.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {
+                renderPatterns(lastState);
+            });
+        }
+    });
+}
+
+async function renderPatterns(state) {
+    initPatternsListeners();
+
+    const tbody = document.getElementById('patterns-tbody');
+    const outcomesTbody = document.getElementById('patterns-outcomes-tbody');
+    const activeCountEl = document.getElementById('patterns-active-count');
+    const activeSubEl = document.getElementById('patterns-active-sub');
+    const confirmedCountEl = document.getElementById('patterns-confirmed-count');
+    const avgConfEl = document.getElementById('patterns-avg-confidence');
+    const tableCountEl = document.getElementById('patterns-table-count');
+
+    const filterSymbol = document.getElementById('patterns-filter-symbol')?.value || 'ALL';
+    const filterCategory = document.getElementById('patterns-filter-category')?.value || 'ALL';
+    const filterStatus = document.getElementById('patterns-filter-status')?.value || 'ALL';
+
+    // 1. Fetch active patterns
+    try {
+        let activeUrl = '/api/patterns/active';
+        if (filterSymbol !== 'ALL') {
+            activeUrl += `?symbol=${encodeURIComponent(filterSymbol)}`;
+        }
+        const activeRes = await fetch(activeUrl);
+        if (activeRes.ok) {
+            const data = await activeRes.json();
+            let patterns = data.patterns || [];
+
+            // Apply category and status filters
+            if (filterCategory !== 'ALL') {
+                patterns = patterns.filter(p => p.pattern_type === filterCategory);
+            }
+            if (filterStatus !== 'ALL') {
+                patterns = patterns.filter(p => p.status === filterStatus);
+            }
+
+            // Summary counters
+            const formingCount = patterns.filter(p => p.status === 'FORMING').length;
+            const confirmedCount = patterns.filter(p => p.status === 'CONFIRMED').length;
+            if (activeCountEl) activeCountEl.textContent = patterns.length;
+            if (activeSubEl) activeSubEl.textContent = `${formingCount} forming · ${confirmedCount} confirmed`;
+            if (confirmedCountEl) confirmedCountEl.textContent = confirmedCount;
+
+            if (patterns.length > 0) {
+                const avgConf = patterns.reduce((sum, p) => sum + (p.confidence || 0), 0) / patterns.length;
+                if (avgConfEl) avgConfEl.textContent = `${Math.round(avgConf * 100)}%`;
+            } else {
+                if (avgConfEl) avgConfEl.textContent = '—';
+            }
+
+            if (tableCountEl) tableCountEl.textContent = `${patterns.length} displayed`;
+
+            if (tbody) {
+                if (patterns.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:2rem;">No patterns matching current filters.</td></tr>`;
+                } else {
+                    tbody.innerHTML = patterns.map(p => {
+                        const isBullish = p.direction === 'BULLISH';
+                        const isBearish = p.direction === 'BEARISH';
+                        const dirBadge = isBullish
+                            ? `<span style="background:rgba(34,197,94,0.15);color:#22c55e;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.75rem;">▲ Bullish</span>`
+                            : isBearish
+                            ? `<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.75rem;">▼ Bearish</span>`
+                            : `<span style="background:rgba(100,116,139,0.15);color:#94a3b8;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.75rem;">◆ Neutral</span>`;
+
+                        const statusBadge = p.status === 'CONFIRMED'
+                            ? `<span style="background:rgba(34,197,94,0.2);color:#34d399;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.72rem;">CONFIRMED</span>`
+                            : p.status === 'FORMING'
+                            ? `<span style="background:rgba(245,158,11,0.2);color:#fbbf24;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.72rem;">FORMING</span>`
+                            : `<span style="background:rgba(239,68,68,0.2);color:#f87171;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.72rem;">INVALIDATED</span>`;
+
+                        const breakout = p.breakout_level ? formatUSD(p.breakout_level) : '—';
+                        const invalidation = p.invalidation_level ? formatUSD(p.invalidation_level) : '—';
+                        const target = p.target_price ? formatUSD(p.target_price) : '—';
+                        const confPct = Math.round((p.confidence || 0) * 100);
+
+                        // Context confluence details
+                        const ctx = p.context || {};
+                        const regime = ctx.regime || 'neutral';
+                        const trend = ctx.trend || 'neutral';
+                        const rsi = ctx.rsi ? `RSI ${Math.round(ctx.rsi)}` : '';
+                        const vol = ctx.volume_ratio ? `${ctx.volume_ratio.toFixed(1)}x Vol` : '';
+                        const contextSummary = [trend, vol, rsi].filter(Boolean).join(' · ');
+
+                        return `<tr>
+                            <td class="mono" style="font-size:0.72rem;color:var(--text-muted);">${timeAgo(p.timestamp)}</td>
+                            <td class="mono font-bold">${escapeHtml(p.symbol || '—')} <span style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(p.timeframe || '')}</span></td>
+                            <td><strong>${escapeHtml((p.pattern_name || '').replace(/_/g, ' ').toUpperCase())}</strong></td>
+                            <td>${dirBadge}</td>
+                            <td>${statusBadge}</td>
+                            <td class="mono">${breakout}</td>
+                            <td class="mono" style="color:#ef4444;">${invalidation}</td>
+                            <td class="mono" style="color:#22c55e;">${target}</td>
+                            <td class="mono font-bold ${confPct >= 65 ? 'positive' : 'neutral'}">${confPct}%</td>
+                            <td style="font-size:0.72rem;color:var(--text-secondary);">${escapeHtml(contextSummary || regime)}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[Dashboard] Error rendering patterns:', e);
+    }
+
+    // 2. Fetch outcomes / scorecard
+    try {
+        const outcomesRes = await fetch('/api/patterns/outcomes?limit=50');
+        if (outcomesRes.ok) {
+            const data = await outcomesRes.json();
+            const outcomes = data.outcomes || [];
+            if (outcomesTbody) {
+                if (outcomes.length === 0) {
+                    outcomesTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No historical pattern outcomes recorded yet. Live and backtest runs log outcomes automatically.</td></tr>`;
+                } else {
+                    // Group outcomes by pattern_name
+                    const grouped = {};
+                    outcomes.forEach(o => {
+                        const name = o.pattern_name || 'unknown';
+                        if (!grouped[name]) grouped[name] = [];
+                        grouped[name].push(o);
+                    });
+
+                    outcomesTbody.innerHTML = Object.entries(grouped).map(([name, items]) => {
+                        const samples = items.length;
+                        const wins = items.filter(i => (i.net_return || 0) > 0).length;
+                        const winRate = Math.round((wins / samples) * 100);
+                        const avgReturn = items.reduce((s, i) => s + (i.net_return || 0), 0) / samples;
+                        const avgMae = items.reduce((s, i) => s + (i.max_adverse_excursion || 0), 0) / samples;
+
+                        return `<tr>
+                            <td class="mono font-bold">${escapeHtml(name.replace(/_/g, ' ').toUpperCase())}</td>
+                            <td class="mono">${samples}</td>
+                            <td class="mono font-bold ${winRate >= 50 ? 'positive' : 'negative'}">${winRate}%</td>
+                            <td class="mono ${avgReturn >= 0 ? 'positive' : 'negative'}">${formatPct(avgReturn * 100)}</td>
+                            <td class="mono negative">-${(avgMae * 100).toFixed(2)}%</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[Dashboard] Error fetching pattern outcomes:', e);
+    }
+}
+

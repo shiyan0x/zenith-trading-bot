@@ -90,6 +90,42 @@ CREATE TABLE IF NOT EXISTS research_reports (
     experiment_ids TEXT,                -- JSON list of related experiment IDs
     suggestions    TEXT                 -- JSON list of suggested actions
 );
+
+CREATE TABLE IF NOT EXISTS pattern_detections (
+    id             TEXT PRIMARY KEY,
+    pattern_name   TEXT NOT NULL,
+    pattern_type   TEXT NOT NULL,
+    direction      TEXT NOT NULL,
+    symbol         TEXT NOT NULL,
+    timeframe      TEXT NOT NULL,
+    detection_timestamp REAL NOT NULL,
+    status         TEXT NOT NULL,
+    confidence_score REAL NOT NULL,
+    key_levels     TEXT NOT NULL,
+    supporting_evidence TEXT NOT NULL,
+    created_at     TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pattern_outcomes (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    pattern_id     TEXT NOT NULL,
+    pattern_name   TEXT NOT NULL,
+    symbol         TEXT NOT NULL,
+    timeframe      TEXT NOT NULL,
+    direction      TEXT NOT NULL,
+    detection_timestamp REAL NOT NULL,
+    confirmation_timestamp REAL,
+    entry_price    REAL NOT NULL,
+    horizon_bars   INTEGER NOT NULL,
+    return_at_horizon_pct REAL NOT NULL,
+    max_favorable_excursion_pct REAL NOT NULL,
+    max_adverse_excursion_pct REAL NOT NULL,
+    breakout_occurred INTEGER NOT NULL,
+    stop_hit       INTEGER NOT NULL,
+    target_hit     INTEGER NOT NULL,
+    net_pnl_after_costs REAL NOT NULL,
+    evaluation_timestamp REAL NOT NULL
+);
 """
 
 
@@ -367,3 +403,109 @@ class ExperimentStore:
                     (limit,),
                 ).fetchall()
         return [dict(r) for r in rows]
+
+    # ── Pattern Storage & Query Methods ───────────────────────────────────────
+
+    def record_pattern_detection(self, pattern) -> str:
+        """Persist a detected chart pattern event."""
+        p_dict = pattern.to_dict() if hasattr(pattern, 'to_dict') else pattern
+        det_id = str(uuid4())
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO pattern_detections
+                   (id, pattern_name, pattern_type, direction, symbol, timeframe,
+                    detection_timestamp, status, confidence_score, key_levels,
+                    supporting_evidence, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    det_id,
+                    p_dict['pattern_name'],
+                    p_dict['pattern_type'],
+                    p_dict['direction'],
+                    p_dict['symbol'],
+                    p_dict['timeframe'],
+                    float(p_dict['detection_timestamp']),
+                    p_dict['status'],
+                    float(p_dict['confidence_score']),
+                    json.dumps(p_dict.get('key_levels', {})),
+                    json.dumps(p_dict.get('supporting_evidence', {})),
+                    _now_iso(),
+                ),
+            )
+        return det_id
+
+    def record_pattern_outcome(self, outcome) -> int:
+        """Persist an empirical post-detection forward outcome."""
+        o_dict = outcome.to_dict() if hasattr(outcome, 'to_dict') else outcome
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """INSERT INTO pattern_outcomes
+                   (pattern_id, pattern_name, symbol, timeframe, direction,
+                    detection_timestamp, confirmation_timestamp, entry_price,
+                    horizon_bars, return_at_horizon_pct, max_favorable_excursion_pct,
+                    max_adverse_excursion_pct, breakout_occurred, stop_hit,
+                    target_hit, net_pnl_after_costs, evaluation_timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    o_dict['pattern_id'],
+                    o_dict['pattern_name'],
+                    o_dict['symbol'],
+                    o_dict['timeframe'],
+                    o_dict['direction'],
+                    float(o_dict['detection_timestamp']),
+                    float(o_dict['confirmation_timestamp']) if o_dict.get('confirmation_timestamp') else None,
+                    float(o_dict['entry_price']),
+                    int(o_dict['horizon_bars']),
+                    float(o_dict['return_at_horizon_pct']),
+                    float(o_dict['max_favorable_excursion_pct']),
+                    float(o_dict['max_adverse_excursion_pct']),
+                    1 if o_dict.get('breakout_occurred') else 0,
+                    1 if o_dict.get('stop_hit') else 0,
+                    1 if o_dict.get('target_hit') else 0,
+                    float(o_dict['net_pnl_after_costs']),
+                    float(o_dict.get('evaluation_timestamp', 0.0)),
+                ),
+            )
+            return cursor.lastrowid
+
+    def get_pattern_outcomes(
+        self,
+        pattern_name: Optional[str] = None,
+        symbol: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[dict]:
+        """Query stored empirical pattern outcomes."""
+        query = "SELECT * FROM pattern_outcomes WHERE 1=1"
+        params = []
+        if pattern_name:
+            query += " AND pattern_name = ?"
+            params.append(pattern_name)
+        if symbol:
+            query += " AND symbol = ?"
+            params.append(symbol)
+        query += " ORDER BY id DESC LIMIT ?"
+        params.append(limit)
+
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_recent_pattern_detections(self, limit: int = 50) -> list[dict]:
+        """Query recent pattern detections with parsed JSON payloads."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM pattern_detections ORDER BY detection_timestamp DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+
+        results = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d['key_levels'] = json.loads(d['key_levels'])
+                d['supporting_evidence'] = json.loads(d['supporting_evidence'])
+            except Exception:
+                pass
+            results.append(d)
+        return results
+

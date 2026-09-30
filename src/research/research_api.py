@@ -19,6 +19,7 @@ from flask import Blueprint, jsonify, request
 
 from src.research.experiment_store import ExperimentStore
 from src.research.strategy_registry import StrategyRegistry
+from src.research.strategy_generator import StrategyGenerator
 from src.research.strategy_evaluator import StrategyEvaluator
 from src.research.promotion_gate import PromotionGate
 from src.research.overfitting_detector import OverfittingDetector
@@ -32,6 +33,7 @@ research_bp = Blueprint("research", __name__, url_prefix="/api/research")
 # Module-level state — set by register_research_routes()
 _store: Optional[ExperimentStore] = None
 _registry: Optional[StrategyRegistry] = None
+_generator: Optional[StrategyGenerator] = None
 _gate: Optional[PromotionGate] = None
 _detector: Optional[OverfittingDetector] = None
 
@@ -43,10 +45,11 @@ def register_research_routes(app, db_path: Optional[str] = None):
         from src.research.research_api import register_research_routes
         register_research_routes(app)
     """
-    global _store, _registry, _gate, _detector
+    global _store, _registry, _generator, _gate, _detector
 
     _store = ExperimentStore(db_path)
     _registry = StrategyRegistry(_store)
+    _generator = StrategyGenerator(_registry)
     _gate = PromotionGate(_store, _registry)
     _detector = OverfittingDetector(_store)
 
@@ -213,7 +216,7 @@ def research_recommendations():
     if not _store:
         return jsonify({"error": "Research lab not initialized"}), 503
 
-    assistant = ResearchAssistant(_store)
+    assistant = ResearchAssistant(_store, _registry, _generator)
     patterns = assistant.analyze_performance_patterns()
     suggestions = assistant.suggest_experiments(limit=5)
     overfit_risks = _detector.check_test_period_reuse() if _detector else []

@@ -108,6 +108,49 @@ def _compute_obv(df: pd.DataFrame, params: dict) -> dict:
     return {'value': obv}
 
 
+def _compute_pattern(df: pd.DataFrame, params: dict) -> dict:
+    """Computes chart pattern indicator signals (-1.0 bear, 0.0 none, +1.0 bull)."""
+    from src.patterns.pattern_detector import PatternDetector
+    from src.patterns.pattern_definitions import PatternDirection, PatternStatus
+
+    min_conf = float(params.get('min_confidence', 0.55))
+    target_pattern = params.get('pattern_name')
+    require_confirmed = bool(params.get('require_confirmed', True))
+    detector = PatternDetector(min_confidence=min_conf)
+
+    n = len(df)
+    signal_series = pd.Series(0.0, index=df.index, dtype=float)
+    conf_series = pd.Series(0.0, index=df.index, dtype=float)
+
+    eval_window = min(60, n)
+    sub_df = df.iloc[-eval_window:]
+    candles = [
+        Candle(
+            timestamp=float(row.name if isinstance(row.name, (int, float)) else idx),
+            o=float(row['open']), h=float(row['high']), l=float(row['low']),
+            c=float(row['close']), volume=float(row['volume']), is_closed=True
+        )
+        for idx, row in sub_df.iterrows()
+    ]
+
+    for offset, loc in [(-2, n - 2), (-1, n - 1)]:
+        if len(candles) + offset < 20 or loc < 0:
+            continue
+        eval_idx = len(candles) + offset
+        matches = detector.detect_at_index(candles, eval_idx)
+        for m in matches:
+            if target_pattern and m.pattern_name != target_pattern:
+                continue
+            if require_confirmed and m.status != PatternStatus.CONFIRMED:
+                continue
+            sig = 1.0 if m.direction == PatternDirection.BULLISH else (-1.0 if m.direction == PatternDirection.BEARISH else 0.0)
+            signal_series.iloc[loc] = sig
+            conf_series.iloc[loc] = m.confidence_score
+            break
+
+    return {'signal': signal_series, 'confidence': conf_series}
+
+
 APPROVED_INDICATORS: dict[str, callable] = {
     'ema':             _compute_ema,
     'sma':             _compute_sma,
@@ -118,6 +161,7 @@ APPROVED_INDICATORS: dict[str, callable] = {
     'vwap':            _compute_vwap,
     'macd':            _compute_macd,
     'obv':             _compute_obv,
+    'pattern':         _compute_pattern,
 }
 
 

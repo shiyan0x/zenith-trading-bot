@@ -115,6 +115,20 @@ class MarketFeed:
             List of Candle objects with real historical prices.
         """
         self._require_network_dependencies()
+        from src.core.candle_aggregator import (
+            needs_aggregation, get_source_interval, aggregate_historical_candles, CandleAggregator
+        )
+        if needs_aggregation(interval):
+            source_tf = get_source_interval(interval)
+            source_candles = await self.get_historical_klines(
+                symbol=symbol,
+                interval=source_tf,
+                limit=min(limit * 2, 1000),
+                start_time=start_time,
+                end_time=end_time
+            )
+            return aggregate_historical_candles(source_candles, interval)
+
         url = f"{self.rest_url}{self.klines_endpoint}"
         params = {
             'symbol': symbol.upper(),
@@ -158,6 +172,19 @@ class MarketFeed:
         Fetch a large range of historical data by paginating through the API.
         Needed for backtesting over weeks/months of data.
         """
+        from src.core.candle_aggregator import (
+            needs_aggregation, get_source_interval, aggregate_historical_candles, CandleAggregator
+        )
+        if needs_aggregation(interval):
+            source_tf = get_source_interval(interval)
+            source_candles = await self.get_all_historical_klines(
+                symbol=symbol,
+                interval=source_tf,
+                start_time=start_time,
+                end_time=end_time
+            )
+            return aggregate_historical_candles(source_candles, interval)
+
         all_candles = []
         current_start = start_time
 
@@ -194,6 +221,37 @@ class MarketFeed:
         Every price is real, straight from Binance.
         """
         self._require_network_dependencies()
+        from src.core.candle_aggregator import (
+            needs_aggregation, get_source_interval, CandleAggregator
+        )
+        if needs_aggregation(interval):
+            source_tf = get_source_interval(interval)
+            aggregator = CandleAggregator(interval)
+
+            def handle_source_candle(sc: Candle):
+                if not sc.is_closed:
+                    on_candle(sc)
+                    return
+                merged = aggregator.push(sc)
+                if merged is not None:
+                    on_candle(merged)
+                else:
+                    # Bar is still collecting; emit interim tick with is_closed=False
+                    # so current price updates on the dashboard without triggering premature signals
+                    interim = Candle(
+                        timestamp=sc.timestamp,
+                        o=sc.open,
+                        h=sc.high,
+                        l=sc.low,
+                        c=sc.close,
+                        volume=sc.volume,
+                        is_closed=False
+                    )
+                    on_candle(interim)
+
+            await self.stream_live(symbol=symbol, interval=source_tf, on_candle=handle_source_candle)
+            return
+
         stream = f"{symbol.lower()}@kline_{interval}"
         url = f"{self.ws_url}/{stream}"
 

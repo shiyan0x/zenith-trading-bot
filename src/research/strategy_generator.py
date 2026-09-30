@@ -205,6 +205,72 @@ class StrategyGenerator:
             raise ValueError(f"Generated invalid momentum blueprint: {errors}")
         return blueprint
 
+    def generate_pattern_reversal(self, name_prefix: str = "Pattern_Reversal") -> dict:
+        """Pattern reversal candidate combining geometric/candlestick reversals with RSI filter."""
+        pat = random.choice(["Double Bottom", "Hammer", "Bullish Engulfing", "Morning Star"])
+        rsi_period = random.choice([10, 14, 21])
+        sl_mult = round(random.uniform(1.5, 2.5), 1)
+        rr_ratio = round(random.uniform(1.8, 3.0), 1)
+        time_stop = random.choice([15, 20, 25])
+
+        blueprint = {
+            "name": f"{name_prefix}_{pat.replace(' ', '')}_R{rsi_period}",
+            "archetype": "pattern_reversal",
+            "indicators": {
+                "pattern_sig": {"type": "pattern", "pattern_name": pat, "require_confirmed": True},
+                "rsi": {"type": "rsi", "period": rsi_period},
+                "atr": {"type": "atr", "period": 14},
+            },
+            "entry_long": [
+                {"left": "pattern_sig_signal", "op": "above", "right": 0},
+                {"left": "rsi", "op": "between", "min": 30, "max": 65},
+            ],
+            "entry_short": [],
+            "exit": {
+                "stop_loss_atr_mult": sl_mult,
+                "take_profit_rr": rr_ratio,
+                "time_stop_bars": time_stop,
+            },
+            "min_candles": 50,
+        }
+        errors = validate_blueprint(blueprint)
+        if errors:
+            raise ValueError(f"Generated invalid pattern reversal blueprint: {errors}")
+        return blueprint
+
+    def generate_pattern_continuation(self, name_prefix: str = "Pattern_Continuation") -> dict:
+        """Pattern continuation candidate combining flags/triangles with trend moving average."""
+        pat = random.choice(["Bullish Flag", "Ascending Triangle", "Bullish Pennant"])
+        ema_period = random.choice([15, 20, 30])
+        sl_mult = round(random.uniform(1.5, 2.5), 1)
+        rr_ratio = round(random.uniform(1.8, 3.0), 1)
+        time_stop = random.choice([15, 20, 25])
+
+        blueprint = {
+            "name": f"{name_prefix}_{pat.replace(' ', '')}_E{ema_period}",
+            "archetype": "pattern_continuation",
+            "indicators": {
+                "pattern_sig": {"type": "pattern", "pattern_name": pat, "require_confirmed": True},
+                "ema_trend": {"type": "ema", "period": ema_period},
+                "atr": {"type": "atr", "period": 14},
+            },
+            "entry_long": [
+                {"left": "pattern_sig_signal", "op": "above", "right": 0},
+                {"left": "close", "op": "above", "right": "ema_trend"},
+            ],
+            "entry_short": [],
+            "exit": {
+                "stop_loss_atr_mult": sl_mult,
+                "take_profit_rr": rr_ratio,
+                "time_stop_bars": time_stop,
+            },
+            "min_candles": 50,
+        }
+        errors = validate_blueprint(blueprint)
+        if errors:
+            raise ValueError(f"Generated invalid pattern continuation blueprint: {errors}")
+        return blueprint
+
     # ── Random Candidate Dispatcher ───────────────────────────────────────
 
     def generate_random_candidate(self) -> dict:
@@ -213,6 +279,8 @@ class StrategyGenerator:
             self.generate_trend_following,
             self.generate_mean_reversion,
             self.generate_momentum_breakout,
+            self.generate_pattern_reversal,
+            self.generate_pattern_continuation,
         ]
         chosen = random.choice(archetypes)
         return chosen()

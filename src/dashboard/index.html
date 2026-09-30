@@ -1188,17 +1188,18 @@
 
         <!-- Timeframe Selector -->
         <div class="tf-selector">
-            <div class="tf-label">⏱ Timeframe</div>
-            <div class="tf-pills" id="tf-pills">
-                <button class="tf-pill active" data-tf="1m">1m</button>
-                <button class="tf-pill" data-tf="3m">3m</button>
-                <button class="tf-pill" data-tf="5m">5m</button>
-                <button class="tf-pill" data-tf="15m">15m</button>
-                <button class="tf-pill" data-tf="30m">30m</button>
-                <button class="tf-pill" data-tf="1h">1h</button>
-                <button class="tf-pill" data-tf="4h">4h</button>
-                <button class="tf-pill" data-tf="1d">1d</button>
+            <div class="tf-label" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>⏱ Timeframe</span>
+                <span id="active-tf-badge" style="font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-weight: 600;">15m</span>
             </div>
+            <div class="tf-pills" id="tf-pills">
+                <button class="tf-pill" data-tf="5m" title="5 minutes (Native Binance interval)">5m</button>
+                <button class="tf-pill" data-tf="10m" title="10 minutes (Aggregated: 2 × 5m candles)">10m*</button>
+                <button class="tf-pill active" data-tf="15m" title="15 minutes (Native Binance interval)">15m</button>
+                <button class="tf-pill" data-tf="1h" title="1 hour (Native Binance interval)">1h</button>
+                <button class="tf-pill" data-tf="4h" title="4 hours (Native Binance interval)">4h</button>
+            </div>
+            <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 4px;">*10m aggregated honestly from 5m bars</div>
         </div>
 
         <!-- Navigation -->
@@ -1249,6 +1250,12 @@
             </div>
             <div class="nav-item" data-view="controls">
                 <span class="nav-icon">🛡️</span> Controls
+            </div>
+            <div class="nav-item" data-view="tfcompare">
+                <span class="nav-icon">⏱️</span> Timeframe Comparison
+            </div>
+            <div class="nav-item" data-view="patterns">
+                <span class="nav-icon">📐</span> Chart Patterns
             </div>
         </nav>
 
@@ -1989,6 +1996,334 @@
             </div>
         </section>
 
+        <!-- ─── TIMEFRAME COMPARISON ─── -->
+        <section class="view-section" id="view-tfcompare">
+            <div class="section-header">
+                <h1>Multi-Timeframe Performance Comparison</h1>
+                <div class="section-desc">Side-by-side performance analysis, sample size tracking, and controlled walk-forward evaluations across 5m, 10m, 15m, 1h, and 4h intervals</div>
+            </div>
+
+            <!-- Filters & Controls Bar -->
+            <div class="glass-card" style="margin-bottom: 1.25rem;">
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                        <div>
+                            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Date Range</label>
+                            <select id="tf-filter-date" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                                <option value="all">All Available</option>
+                                <option value="7d">Last 7 Days</option>
+                                <option value="30d">Last 30 Days</option>
+                                <option value="90d">Last 90 Days</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Symbol</label>
+                            <select id="tf-filter-symbol" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                                <option value="all">All Symbols</option>
+                                <option value="BTCUSDT">BTCUSDT</option>
+                                <option value="ETHUSDT">ETHUSDT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Strategy</label>
+                            <select id="tf-filter-strategy" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                                <option value="all">All Strategies</option>
+                                <option value="ema_vwap_rsi">EMA + VWAP + RSI</option>
+                                <option value="mean_reversion">Mean Reversion</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Trading Mode</label>
+                            <select id="tf-filter-mode" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                                <option value="all">All Modes</option>
+                                <option value="paper">Paper Trading</option>
+                                <option value="backtest">Backtest</option>
+                                <option value="live">Live Trading</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" id="btn-refresh-tf-compare" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">🔄 Refresh Data</button>
+                    </div>
+                </div>
+
+                <!-- Comparability Notice -->
+                <div style="margin-top: 0.85rem; padding: 0.65rem 0.85rem; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: var(--radius-sm); font-size: 0.75rem; color: #93c5fd; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>ℹ️</span>
+                    <span id="tf-comparability-text">Notice: Comparisons are only scientifically valid when evaluated across identical assets, date windows, and risk limits. Timeframes with fewer than 3 trades show "Not enough data" to prevent misleading conclusions.</span>
+                </div>
+            </div>
+
+            <!-- Comparison Table Card -->
+            <div class="glass-card" style="margin-bottom: 1.25rem;">
+                <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><span class="icon">📊</span> Timeframe Performance Matrix</span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">Real past/paper metrics after simulated fees & slippage</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="tf-comparison-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Timeframe</th>
+                                <th>Type</th>
+                                <th>Sample Size</th>
+                                <th>Win Rate</th>
+                                <th>W / L</th>
+                                <th>Gross P&L</th>
+                                <th>Fees Paid</th>
+                                <th>Net P&L</th>
+                                <th>Avg P&L / Trade</th>
+                                <th>Max Drawdown</th>
+                                <th>Profit Factor</th>
+                                <th>Data Gaps / Errors</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tf-comparison-tbody">
+                            <tr><td colspan="13" style="text-align:center; padding: 1.5rem; color:var(--text-muted);">Loading timeframe comparison data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Visual Bar Comparison -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">💰</span> Net P&L by Timeframe ($)</div>
+                    <div id="tf-pnl-bars" style="display: flex; flex-direction: column; gap: 0.65rem; padding: 0.5rem 0;">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">🎯</span> Win Rate & Activity (%)</div>
+                    <div id="tf-winrate-bars" style="display: flex; flex-direction: column; gap: 0.65rem; padding: 0.5rem 0;">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controlled Timeframe Evaluation Runner (Step 6) -->
+            <div class="glass-card">
+                <div class="card-title"><span class="icon">🧪</span> Controlled Multi-Timeframe Evaluation (Backtest Engine)</div>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                    Run historical walk-forward evaluations on <strong>5m, 10m, 15m, 1h, and 4h</strong> under identical test conditions (same asset, date range, 70/30 train/test split, realistic fee model, and isolated balances).
+                </p>
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1rem;">
+                    <div>
+                        <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Symbol</label>
+                        <select id="tf-eval-symbol" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                            <option value="BTCUSDT">BTCUSDT</option>
+                            <option value="ETHUSDT">ETHUSDT</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Strategy</label>
+                        <select id="tf-eval-strategy" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                            <option value="ema_vwap_rsi">EMA + VWAP + RSI</option>
+                            <option value="mean_reversion">Mean Reversion</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Lookback Period</label>
+                        <select id="tf-eval-days" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                            <option value="30">30 Days</option>
+                            <option value="60">60 Days</option>
+                            <option value="90">90 Days</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" id="btn-run-tf-evaluation" style="font-size: 0.8rem; padding: 0.45rem 1rem;">🚀 Run Controlled Evaluation</button>
+                    </div>
+                </div>
+
+                <div id="tf-eval-status" style="display:none; padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.85rem;"></div>
+
+                <div id="tf-eval-results-container" style="display:none;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem;">Evaluation Results (Isolated Walk-Forward Test Set):</div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Timeframe</th>
+                                    <th>Status</th>
+                                    <th>Trades</th>
+                                    <th>Win Rate</th>
+                                    <th>Test Return</th>
+                                    <th>Max Drawdown</th>
+                                    <th>Sharpe Ratio</th>
+                                    <th>Profit Factor</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tf-eval-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── CHART PATTERNS VIEW ─── -->
+        <section class="view-section" id="view-patterns">
+            <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h1>Chart Pattern Recognition & Learning</h1>
+                    <div class="section-desc">Deterministic geometric & candlestick pattern detection, contextual confluence scoring, and forward outcome tracking</div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button class="btn btn-secondary" id="btn-refresh-patterns" style="font-size: 0.8rem; padding: 0.45rem 0.85rem;">🔄 Refresh Patterns</button>
+                </div>
+            </div>
+
+            <!-- Pattern Metrics Summary -->
+            <div class="stats-grid" style="margin-bottom: 1.5rem;">
+                <div class="stat-card">
+                    <div class="stat-label">Active Formations</div>
+                    <div class="stat-value neutral" id="patterns-active-count">0</div>
+                    <div class="stat-sub" id="patterns-active-sub">0 forming · 0 confirmed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Confirmed Breakouts</div>
+                    <div class="stat-value positive" id="patterns-confirmed-count">0</div>
+                    <div class="stat-sub">Valid breakout + volume check</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Confidence</div>
+                    <div class="stat-value neutral" id="patterns-avg-confidence">—</div>
+                    <div class="stat-sub">Calibrated geometry & context</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Computer Vision (CV)</div>
+                    <div class="stat-value" style="font-size: 1.1rem; color: #a855f7;" id="patterns-cv-status">Ready (Uncalibrated)</div>
+                    <div class="stat-sub">PyTorch CNN · No synthetic claims</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="glass-card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+                    <div>
+                        <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Symbol</label>
+                        <select id="patterns-filter-symbol" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                            <option value="ALL">All Symbols</option>
+                            <option value="BTCUSDT">BTCUSDT</option>
+                            <option value="ETHUSDT">ETHUSDT</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Category</label>
+                        <select id="patterns-filter-category" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                            <option value="ALL">All Categories</option>
+                            <option value="reversal">Reversals</option>
+                            <option value="continuation">Continuations</option>
+                            <option value="triangle">Triangles</option>
+                            <option value="candlestick">Candlesticks</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Status</label>
+                        <select id="patterns-filter-status" class="form-select" style="background: var(--bg-card); color: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                            <option value="ALL">All Statuses</option>
+                            <option value="CONFIRMED">Confirmed</option>
+                            <option value="FORMING">Forming</option>
+                            <option value="INVALIDATED">Invalidated</option>
+                        </select>
+                    </div>
+                    <div style="margin-left: auto; font-size: 0.75rem; color: var(--text-muted);">
+                        Supported: <strong>18 Patterns</strong> (4 Reversals, 4 Continuations, 3 Triangles, 7 Candlesticks)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active / Recent Patterns Table -->
+            <div class="glass-card" style="margin-bottom: 1.5rem;">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span><span class="icon">📐</span> Live Detected Patterns & Context</span>
+                    <span id="patterns-table-count" style="font-size: 0.75rem; color: var(--text-muted);">0 detected</span>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Detected</th>
+                                <th>Symbol / TF</th>
+                                <th>Pattern Name</th>
+                                <th>Direction</th>
+                                <th>Status</th>
+                                <th>Breakout Level</th>
+                                <th>Invalidation</th>
+                                <th>Price Target</th>
+                                <th>Confidence</th>
+                                <th>Context Confluence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patterns-tbody">
+                            <tr>
+                                <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                                    Scanning market data for chart patterns...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Two-Column Cards: Outcomes and CV Model -->
+            <div class="card-columns" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <!-- Historical Outcome Scorecard -->
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">📊</span> Empirical Pattern Outcomes & Edge</div>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Forward walk-forward evaluation (MFE, MAE, breakout verification, fees & slippage):
+                    </p>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" style="width: 100%; font-size: 0.78rem;">
+                            <thead>
+                                <tr>
+                                    <th>Pattern</th>
+                                    <th>Samples</th>
+                                    <th>Win Rate</th>
+                                    <th>Avg Return</th>
+                                    <th>Max Adv Ex (MAE)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patterns-outcomes-tbody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                                        Collecting empirical forward outcomes from backtests and live candles...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Computer Vision & Learning Engine Status -->
+                <div class="glass-card">
+                    <div class="card-title"><span class="icon">👁️</span> Computer Vision & AI Improvement</div>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-muted);">Architecture:</span>
+                            <span class="mono" style="color: #fff;">PyTorch ChartPatternCNN (64×64)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-muted);">Data Honesty Policy:</span>
+                            <span style="color: var(--amber); font-weight: 600;">No Fabricated Datasets</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-muted);">Current Status:</span>
+                            <span style="color: #60a5fa; font-weight: 600;">Inference Interface Ready</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-muted);">Self-Improvement Lab:</span>
+                            <span style="color: var(--green); font-weight: 600;">Active Strategy Generator</span>
+                        </div>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem;">
+                            The AI research engine automatically explores candidate strategies combining verified chart patterns with RSI, VWAP, and EMA. All models are evaluated chronologically on untouched out-of-sample data.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Confirmation Modal Overlay -->

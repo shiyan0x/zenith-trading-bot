@@ -65,6 +65,19 @@ def create_dashboard_app(bot_state: dict) -> tuple:
     except ImportError:
         pass
 
+    # Register timeframe comparison API routes (optional)
+    try:
+        from src.dashboard.timeframe_api import register_timeframe_routes
+        register_timeframe_routes(app)
+    except ImportError as e:
+        logger.warning(f"[DASHBOARD] Could not register timeframe routes: {e}")
+
+    # Register chart pattern API routes (optional)
+    try:
+        from src.dashboard.pattern_api import register_pattern_routes
+        register_pattern_routes(app)
+    except ImportError as e:
+        logger.warning(f"[DASHBOARD] Could not register pattern routes: {e}")
 
     # Callback for timeframe changes — set by main.py
     app._on_timeframe_change = None
@@ -199,7 +212,7 @@ def create_dashboard_app(bot_state: dict) -> tuple:
     def handle_timeframe_change(data):
         """Handle timeframe change request from the dashboard."""
         new_tf = data.get('timeframe', '1m')
-        valid_tfs = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '1d']
+        valid_tfs = ['1m', '3m', '5m', '10m', '15m', '30m', '1h', '2h', '4h', '1d']
         if new_tf not in valid_tfs:
             logger.warning(f"[DASHBOARD] Invalid timeframe: {new_tf}")
             return

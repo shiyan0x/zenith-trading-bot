@@ -301,7 +301,10 @@ class ResearchAssistant:
                         continue
 
         # 2. Explore under-tested archetypes
-        all_archetypes = {"trend_following", "mean_reversion", "momentum_breakout"}
+        all_archetypes = {
+            "trend_following", "mean_reversion", "momentum_breakout",
+            "pattern_reversal", "pattern_continuation",
+        }
         tested_archetypes = set(arch_perf.keys())
         untested = all_archetypes - tested_archetypes
 
@@ -313,6 +316,8 @@ class ResearchAssistant:
                 "trend_following": self.generator.generate_trend_following,
                 "mean_reversion": self.generator.generate_mean_reversion,
                 "momentum_breakout": self.generator.generate_momentum_breakout,
+                "pattern_reversal": self.generator.generate_pattern_reversal,
+                "pattern_continuation": self.generator.generate_pattern_continuation,
             }.get(arch)
             if gen_fn:
                 bp = gen_fn()

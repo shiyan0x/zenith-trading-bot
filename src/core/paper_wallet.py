@@ -29,7 +29,8 @@ class Position:
     def __init__(self, symbol: str, side: str, quantity: float,
                  entry_price: float, fee_paid: float, timestamp: float,
                  strategy_name: str = '', stop_loss: float | None = None,
-                 take_profit: float | None = None, collateral: float = 0.0):
+                 take_profit: float | None = None, collateral: float = 0.0,
+                 timeframe: str = ''):
         self.symbol = symbol
         self.side = side              # 'long' or 'short'
         self.quantity = quantity       # how much you hold
@@ -43,6 +44,7 @@ class Position:
         # notional.  Keeping it separate from available cash makes both cash
         # and equity correct without pretending borrowed assets are owned.
         self.collateral = collateral
+        self.timeframe = timeframe    # interval the position was opened under
         self.id = f"{symbol}_{side}_{int(timestamp * 1000)}"
 
     def unrealized_pnl(self, current_price: float) -> float:
@@ -75,6 +77,7 @@ class Position:
             'stop_loss': self.stop_loss,
             'take_profit': self.take_profit,
             'collateral': self.collateral,
+            'timeframe': self.timeframe,
             'timestamp': self.timestamp,
             'entry_time': datetime.fromtimestamp(
                 self.timestamp, tz=timezone.utc
@@ -100,6 +103,7 @@ class Position:
             stop_loss=float(d['stop_loss']) if d.get('stop_loss') is not None else None,
             take_profit=float(d['take_profit']) if d.get('take_profit') is not None else None,
             collateral=float(d.get('collateral', 0.0)),
+            timeframe=d.get('timeframe', ''),
         )
         if 'id' in d:
             pos.id = d['id']
@@ -182,7 +186,8 @@ class PaperWallet:
     def open_position(self, symbol: str, side: str, quantity: float,
                       execution_price: float, fee: float,
                       strategy_name: str = '', stop_loss: float | None = None,
-                      take_profit: float | None = None) -> Optional[Position]:
+                      take_profit: float | None = None,
+                      timeframe: str = '') -> Optional[Position]:
         """
         Open a new position.
 
@@ -229,6 +234,7 @@ class PaperWallet:
             stop_loss=stop_loss,
             take_profit=take_profit,
             collateral=collateral,
+            timeframe=timeframe,
         )
         self.positions[pos.id] = pos
 
@@ -286,6 +292,7 @@ class PaperWallet:
             'symbol': pos.symbol,
             'side': pos.side,
             'strategy_name': pos.strategy_name,
+            'timeframe': pos.timeframe,
             'quantity': pos.quantity,
             'entry_price': pos.entry_price,
             'exit_price': execution_price,

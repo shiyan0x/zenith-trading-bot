@@ -25,7 +25,7 @@ class TradeLogger:
     """
 
     CSV_FIELDS = [
-        'id', 'symbol', 'side', 'quantity',
+        'id', 'symbol', 'side', 'timeframe', 'quantity',
         'entry_price', 'exit_price',
         'entry_time', 'exit_time',
         'gross_pnl', 'total_fees', 'net_pnl', 'net_pnl_pct',
@@ -58,14 +58,16 @@ class TradeLogger:
 
         The trade dict comes from PaperWallet.close_position().
         """
-        # Add human-readable timestamps
         trade_record = dict(trade)
-        trade_record['entry_time_str'] = datetime.fromtimestamp(
-            trade['entry_time'], tz=timezone.utc
-        ).strftime('%Y-%m-%d %H:%M:%S UTC')
-        trade_record['exit_time_str'] = datetime.fromtimestamp(
-            trade['exit_time'], tz=timezone.utc
-        ).strftime('%Y-%m-%d %H:%M:%S UTC')
+        # Add human-readable timestamps if numeric
+        for time_key in ('entry_time', 'exit_time'):
+            val = trade.get(time_key)
+            if isinstance(val, (int, float)):
+                trade_record[f'{time_key}_str'] = datetime.fromtimestamp(
+                    val, tz=timezone.utc
+                ).strftime('%Y-%m-%d %H:%M:%S UTC')
+            else:
+                trade_record[f'{time_key}_str'] = str(val or '')
 
         # Append to CSV
         try:
